@@ -120,7 +120,7 @@ export default function NewEvent() {
                   <CalendarIcon size={20} />
                 </div>
                 <Popover>
-                  <PopoverTrigger asChild>
+                  <PopoverTrigger>
                     <div
                       className={cn(
                         "flex-1 justify-start text-left font-medium text-lg p-0 hover:bg-transparent cursor-pointer",
