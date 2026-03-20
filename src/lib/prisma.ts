@@ -1,16 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 
 const prismaClientSingleton = () => {
-  if (process.env.DATABASE_URL?.startsWith("file:")) {
-    // Force absolute path for SQLite on Vercel
-    return new PrismaClient({
-      datasources: {
-        db: {
-          url: process.env.DATABASE_URL.replace("file:./", `file:${process.cwd()}/prisma/`)
-        }
-      }
-    });
-  }
   return new PrismaClient();
 };
 
