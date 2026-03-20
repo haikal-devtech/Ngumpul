@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Calendar as CalendarIcon, MapPin, Clock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,13 +13,17 @@ import { cn } from "@/lib/utils";
 
 export default function NewEvent() {
   const router = useRouter();
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [date, setDate] = useState<Date | undefined>(undefined);
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     location: "",
   });
+
+  useEffect(() => {
+    setDate(new Date());
+  }, []);
 
   const nextStep = () => setStep((s) => s + 1);
   const prevStep = () => {
