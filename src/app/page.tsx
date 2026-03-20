@@ -68,9 +68,8 @@ export default function Home() {
                 placeholder="Search your collective..." 
                 className="pl-12 h-14 rounded-2xl bg-white/60 backdrop-blur-md border border-white/40 shadow-sm text-lg focus-visible:ring-primary/20 focus-visible:bg-white transition-all"
               />
-
             </div>
-          </div>
+          </motion.div>
 
           {/* Active Collections */}
           <section className="space-y-4">
@@ -132,7 +131,6 @@ export default function Home() {
                             </div>
                           </div>
                           <span className="text-sm font-medium text-muted-foreground">5 filled</span>
-                        </div>
                         </div>
                       </CardContent>
                     </Card>
