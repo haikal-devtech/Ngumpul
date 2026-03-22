@@ -849,17 +849,62 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
               </div>
             </div>
             
-            {event.confirmedSlot && (
-              <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 p-4 rounded-2xl">
-                <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-sm mb-1">
-                  <CheckCircle size={16} />
-                  {t.confirmedSlotLabel}
+            {event.confirmedSlot && (() => {
+              const [datePart, timePart] = event.confirmedSlot!.split(/-(?=\d{2}:\d{2}$)/);
+              const startDate = parseISO(datePart);
+              const [startH, startM] = (timePart || '10:00').split(':').map(Number);
+              const start = new Date(startDate);
+              start.setHours(startH, startM);
+              const end = new Date(start);
+              end.setHours(start.getHours() + 2);
+              const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+              const gcalParams = new URLSearchParams({
+                action: 'TEMPLATE',
+                text: event.title,
+                dates: `${fmt(start)}/${fmt(end)}`,
+                details: event.description || '',
+                location: event.location || '',
+              });
+              const icsContent = [
+                'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
+                `SUMMARY:${event.title}`,
+                `DTSTART:${fmt(start)}`, `DTEND:${fmt(end)}`,
+                `DESCRIPTION:${event.description || ''}`,
+                `LOCATION:${event.location || ''}`,
+                'END:VEVENT', 'END:VCALENDAR'
+              ].join('\n');
+              const icsBlob = typeof window !== 'undefined' ? new Blob([icsContent], { type: 'text/calendar' }) : null;
+              const icsUrl = icsBlob ? URL.createObjectURL(icsBlob) : '#';
+              return (
+                <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 p-4 rounded-2xl">
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-sm mb-1">
+                    <CheckCircle size={16} />
+                    {t.confirmedSlotLabel}
+                  </div>
+                  <div className="text-zinc-900 dark:text-white font-black mb-3">
+                    {format(parseISO(datePart), 'EEEE, dd MMM')} @ {timePart}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <a
+                      href={`https://calendar.google.com/calendar/render?${gcalParams.toString()}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+                    >
+                      <span>🗓️</span> {language === 'id' ? 'Tambah ke Google Calendar' : 'Add to Google Calendar'}
+                    </a>
+                    <a
+                      href={icsUrl}
+                      download={`${event.title.replace(/\s+/g, '_')}.ics`}
+                      className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+                    >
+                      <span>🍎</span> {language === 'id' ? 'Tambah ke Apple Calendar' : 'Add to Apple Calendar'}
+                    </a>
+                  </div>
                 </div>
-                <div className="text-zinc-900 dark:text-white font-black">
-                  {format(parseISO(event.confirmedSlot.split('-')[0]), 'EEEE, dd MMM')} @ {event.confirmedSlot.split('-')[1]}
-                </div>
-              </div>
-            )}
+              );
+            })()}
+
             
             {event.location && (
               <div className="mt-6 h-48 rounded-2xl bg-zinc-100 dark:bg-zinc-800 overflow-hidden border border-zinc-200 dark:border-zinc-700 relative group cursor-pointer" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location!)}`, '_blank')}>
