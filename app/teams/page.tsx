@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Users, Plus, ChevronRight, Star, Crown, Calendar, Hash, Trash2 } from "lucide-react";
 import { useAppContext } from "@/components/AppContext";
 import { Team } from "@/lib/types";
@@ -82,6 +83,7 @@ function CreateTeamModal({ onCreated, onCancel, language }: { onCreated: (team: 
 
 // --- Main Teams Page ---
 export default function TeamsPage() {
+  const router = useRouter();
   const { language, currentUser, teams, setTeams, currentTeam, setCurrentTeam } = useAppContext();
   const [showCreate, setShowCreate] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
@@ -158,7 +160,7 @@ export default function TeamsPage() {
                </button>
                <button
                  className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition"
-                 onClick={() => window.location.href = `/event/new?teamId=${currentTeam.id}`}
+                 onClick={() => router.push(`/event/new?teamId=${currentTeam.id}`)}
                >
                  {language === 'id' ? '+ Acara Baru' : '+ New Event'}
                </button>

@@ -10,24 +10,20 @@ export default function NewEventPage() {
   const { language, setMyEvents } = useAppContext();
 
   const handleSaved = async (event: NgumpulEvent) => {
-    try {
-      // In a fully integrated app, this calls POST /api/events
-      // For now, we update the local generic AppContext to keep the flow working!
-      const res = await fetch("/api/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...event,
-          date_range: event.dates,
-          time_range: [event.startTime, event.endTime],
-        }),
-      });
-      // Even if API fails due to auth, we push it locally to show the UI works:
-      setMyEvents((prev) => [event, ...prev]);
-      router.push(`/event/${event.id}`);
-    } catch (e) {
-      console.error(e);
-    }
+    // Add to context first so UI is instant
+    setMyEvents((prev) => [event, ...prev]);
+    router.push(`/event/${event.id}`);
+
+    // Fire API in background (best-effort — auth may fail in dev)
+    fetch("/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...event,
+        date_range: event.dates,
+        time_range: [event.startTime, event.endTime],
+      }),
+    }).catch(() => {}); // silent — dedup guard in AppContext prevents doubles
   };
 
   return (

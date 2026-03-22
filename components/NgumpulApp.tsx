@@ -387,8 +387,18 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
             <h3 className="text-2xl font-bold mb-3 relative z-10">{t.feat4Title}</h3>
             <p className="text-indigo-200 max-w-sm mb-8 relative z-10">{t.feat4Desc}</p>
             <div className="flex gap-3 relative z-10">
-              <button className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl text-sm font-bold transition-colors border border-indigo-500">Google Calendar</button>
-              <button className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl text-sm font-bold transition-colors border border-indigo-500">Apple Calendar</button>
+              <button
+                onClick={() => window.open('https://calendar.google.com/calendar/r/eventedit', '_blank')}
+                className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl text-sm font-bold transition-colors border border-indigo-500 flex items-center gap-2"
+              >
+                🗓️ Google Calendar
+              </button>
+              <button
+                onClick={() => window.open('https://www.icloud.com/calendar/', '_blank')}
+                className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl text-sm font-bold transition-colors border border-indigo-500 flex items-center gap-2"
+              >
+                🍎 Apple Calendar
+              </button>
             </div>
             {/* Decorative background circles */}
             <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-indigo-600 rounded-full blur-3xl opacity-50"></div>
@@ -685,9 +695,16 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
         data[`${date}-${time}`] = 0;
       });
     });
-    
-    // Add existing participants' availability
+
+    // Check if current user is already saved in event.participants
+    const currentUserId = currentUser?.id;
+    const alreadySaved = currentUserId
+      ? event.participants.some(p => p.id === currentUserId)
+      : false;
+
+    // Add saved participants — but skip current user if we'll add their live slots below
     event.participants.forEach(p => {
+      if (alreadySaved && p.id === currentUserId) return; // avoid double-count
       p.availability.forEach(slotId => {
         if (data[slotId] !== undefined) {
           data[slotId]++;
@@ -695,8 +712,8 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
       });
     });
 
-    // Add current user's availability if they are joined
-    if (isJoined) {
+    // Add current user's live (unsaved) availability so the preview is real-time
+    if (isJoined && myAvailability.length > 0) {
       myAvailability.forEach(slotId => {
         if (data[slotId] !== undefined) {
           data[slotId]++;
@@ -704,9 +721,9 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
       });
     }
     
-    // Note: Heatmap data doesn't include current user until they "Save"
     return data;
-  }, [event.dates, times, event.participants]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event.dates, times, event.participants, isJoined, myAvailability, currentUser?.id]);
 
   const getHeatmapColor = (count: number, total: number) => {
     if (count === 0) return 'bg-zinc-50 dark:bg-zinc-800/50';
