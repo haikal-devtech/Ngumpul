@@ -621,7 +621,10 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
   const [isJoined, setIsJoined] = useState(false); // Check if current user is already in participants
   
   React.useEffect(() => {
-    if (currentUser && event.participants.some(p => p.id === currentUser.id)) {
+    if (currentUser) {
+      setName(currentUser.name);
+      setIsJoined(true);
+    } else if (event.participants.some(p => p.id === currentUser?.id)) {
       setIsJoined(true);
     }
   }, [currentUser, event.participants]);
@@ -865,16 +868,29 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
                 details: event.description || '',
                 location: event.location || '',
               });
-              const icsContent = [
-                'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
-                `SUMMARY:${event.title}`,
-                `DTSTART:${fmt(start)}`, `DTEND:${fmt(end)}`,
-                `DESCRIPTION:${event.description || ''}`,
-                `LOCATION:${event.location || ''}`,
-                'END:VEVENT', 'END:VCALENDAR'
-              ].join('\n');
-              const icsBlob = typeof window !== 'undefined' ? new Blob([icsContent], { type: 'text/calendar' }) : null;
-              const icsUrl = icsBlob ? URL.createObjectURL(icsBlob) : '#';
+              
+              const handleDownloadICS = (e: React.MouseEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const icsContent = [
+                  'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
+                  `SUMMARY:${event.title}`,
+                  `DTSTART:${fmt(start)}`, `DTEND:${fmt(end)}`,
+                  `DESCRIPTION:${event.description || ''}`,
+                  `LOCATION:${event.location || ''}`,
+                  'END:VEVENT', 'END:VCALENDAR'
+                ].join('\n');
+                const icsBlob = new Blob([icsContent], { type: 'text/calendar' });
+                const icsUrl = URL.createObjectURL(icsBlob);
+                const a = document.createElement('a');
+                a.href = icsUrl;
+                a.download = `${event.title.replace(/\s+/g, '_')}.ics`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(icsUrl);
+              };
+
               return (
                 <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 p-4 rounded-2xl">
                   <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-sm mb-1">
@@ -889,17 +905,17 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
                       href={`https://calendar.google.com/calendar/render?${gcalParams.toString()}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
                     >
                       <span>🗓️</span> {language === 'id' ? 'Tambah ke Google Calendar' : 'Add to Google Calendar'}
                     </a>
-                    <a
-                      href={icsUrl}
-                      download={`${event.title.replace(/\s+/g, '_')}.ics`}
-                      className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+                    <button
+                      onClick={handleDownloadICS}
+                      className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
                     >
                       <span>🍎</span> {language === 'id' ? 'Tambah ke Apple Calendar' : 'Add to Apple Calendar'}
-                    </a>
+                    </button>
                   </div>
                 </div>
               );

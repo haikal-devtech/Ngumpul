@@ -14,6 +14,10 @@ type AppContextType = {
   setMyEvents: React.Dispatch<React.SetStateAction<NgumpulEvent[]>>;
   joinedEvents: NgumpulEvent[];
   setJoinedEvents: React.Dispatch<React.SetStateAction<NgumpulEvent[]>>;
+  teams: Team[];
+  setTeams: React.Dispatch<React.SetStateAction<Team[]>>;
+  currentTeam: Team | null;
+  setCurrentTeam: (team: Team | null) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -24,6 +28,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [myEvents, setMyEvents] = useState<NgumpulEvent[]>([]);
   const [joinedEvents, setJoinedEvents] = useState<NgumpulEvent[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [currentTeam, setCurrentTeam] = useState<Team | null>(null);
 
   useEffect(() => {
     const lang = localStorage.getItem('ngumpul_lang');
@@ -40,7 +46,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AppContext.Provider value={{ currentUser, setCurrentUser, language, setLanguage, theme, toggleTheme, myEvents, setMyEvents, joinedEvents, setJoinedEvents }}>
+    <AppContext.Provider value={{
+      currentUser, setCurrentUser, language, setLanguage, theme, toggleTheme,
+      myEvents, setMyEvents, joinedEvents, setJoinedEvents,
+      teams, setTeams, currentTeam, setCurrentTeam
+    }}>
       {children}
     </AppContext.Provider>
   );

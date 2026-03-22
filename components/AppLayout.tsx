@@ -1,14 +1,30 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useAppContext } from "./AppContext";
 import { Navbar, Footer } from "./NgumpulApp";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { currentUser, language, setLanguage, theme, toggleTheme, myEvents, joinedEvents } = useAppContext();
+  const { data: session, status } = useSession();
+  const { currentUser, setCurrentUser, language, setLanguage, theme, toggleTheme, myEvents, joinedEvents } = useAppContext();
+
+  useEffect(() => {
+    if (session?.user && !currentUser) {
+      setCurrentUser({
+        id: session.user.id || session.user.email || "user",
+        name: session.user.name || "User",
+        email: session.user.email || "",
+        bio: "",
+        photoUrl: session.user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.user.name}`,
+      });
+    } else if (status === "unauthenticated" && currentUser) {
+      setCurrentUser(null);
+    }
+  }, [session, status, currentUser, setCurrentUser]);
 
   // Map route to internal 'view' state used by original Nav
   const getViewFromPath = () => {

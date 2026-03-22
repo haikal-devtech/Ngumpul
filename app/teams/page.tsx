@@ -82,10 +82,17 @@ function CreateTeamModal({ onCreated, onCancel, language }: { onCreated: (team: 
 
 // --- Main Teams Page ---
 export default function TeamsPage() {
-  const { language, currentUser } = useAppContext();
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const { language, currentUser, teams, setTeams, currentTeam, setCurrentTeam } = useAppContext();
   const [showCreate, setShowCreate] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+
+  const handleCopyInvite = () => {
+    const link = `${window.location.origin}/teams/join?team=${currentTeam?.id}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setInviteCopied(true);
+      setTimeout(() => setInviteCopied(false), 2500);
+    });
+  };
 
   const t = {
     title: language === "id" ? "Tim Saya" : "My Teams",
@@ -104,12 +111,12 @@ export default function TeamsPage() {
 
   const handleCreateTeam = (team: Team) => {
     setTeams((prev) => [team, ...prev]);
-    setSelectedTeam(team);
+    setCurrentTeam(team);
     setShowCreate(false);
   };
 
   // --- Team Workspace View ---
-  if (selectedTeam) {
+  if (currentTeam) {
     return (
       <div className="min-h-screen bg-white dark:bg-zinc-950 pt-24 pb-20 px-4 sm:px-6 max-w-5xl mx-auto">
         {showCreate && (
@@ -120,7 +127,7 @@ export default function TeamsPage() {
           />
         )}
 
-        <button onClick={() => setSelectedTeam(null)} className="text-sm font-semibold text-zinc-400 hover:text-indigo-600 dark:text-zinc-500 dark:hover:text-indigo-400 transition-colors mb-8 flex items-center gap-1">
+        <button onClick={() => setCurrentTeam(null)} className="text-sm font-semibold text-zinc-400 hover:text-indigo-600 dark:text-zinc-500 dark:hover:text-indigo-400 transition-colors mb-8 flex items-center gap-1">
           {t.back}
         </button>
 
@@ -128,18 +135,34 @@ export default function TeamsPage() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-black text-xl">
-                {selectedTeam.name[0].toUpperCase()}
+                {currentTeam.name[0].toUpperCase()}
               </div>
               <div>
-                <h1 className="text-2xl font-extrabold text-zinc-900 dark:text-white">{selectedTeam.name}</h1>
-                {selectedTeam.description && (
-                  <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-0.5">{selectedTeam.description}</p>
+                <h1 className="text-2xl font-extrabold text-zinc-900 dark:text-white">{currentTeam.name}</h1>
+                {currentTeam.description && (
+                  <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-0.5">{currentTeam.description}</p>
                 )}
               </div>
             </div>
           </div>
-          <div className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0 pt-1">
-            {t.created} {format(new Date(selectedTeam.createdAt), "d MMM yyyy")}
+          <div className="flex flex-col items-end gap-2">
+            <div className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0">
+              {t.created} {format(new Date(currentTeam.createdAt), "d MMM yyyy")}
+            </div>
+            <div className="flex gap-2">
+               <button
+                 onClick={handleCopyInvite}
+                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${inviteCopied ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+               >
+                 {inviteCopied ? (language === 'id' ? '✓ Tautan Disalin!' : '✓ Link Copied!') : (language === 'id' ? 'Undang Anggota' : 'Invite Members')}
+               </button>
+               <button
+                 className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition"
+                 onClick={() => window.location.href = `/event/new?teamId=${currentTeam.id}`}
+               >
+                 {language === 'id' ? '+ Acara Baru' : '+ New Event'}
+               </button>
+            </div>
           </div>
         </div>
 
@@ -152,7 +175,7 @@ export default function TeamsPage() {
                 <h3 className="font-bold text-zinc-900 dark:text-white text-sm">{t.members}</h3>
               </div>
               <div className="space-y-3">
-                {selectedTeam.members.map((member) => (
+                {currentTeam.members.map((member) => (
                   <div key={member.id} className="flex items-center gap-3">
                     <img src={member.photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.name}`} alt={member.name} className="w-8 h-8 rounded-full object-cover" />
                     <div className="flex-1 min-w-0">
@@ -167,12 +190,12 @@ export default function TeamsPage() {
             </div>
 
             <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800/30 p-5 text-center">
-              <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400 mb-1">{selectedTeam.members.length}</div>
+              <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400 mb-1">{currentTeam.members.length}</div>
               <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider">{t.members}</div>
             </div>
 
             <div className="bg-violet-50 dark:bg-violet-900/20 rounded-2xl border border-violet-100 dark:border-violet-800/30 p-5 text-center">
-              <div className="text-3xl font-black text-violet-600 dark:text-violet-400 mb-1">{selectedTeam.events?.length ?? 0}</div>
+              <div className="text-3xl font-black text-violet-600 dark:text-violet-400 mb-1">{currentTeam.events?.length ?? 0}</div>
               <div className="text-xs font-bold text-violet-400 uppercase tracking-wider">{t.events}</div>
             </div>
           </div>
@@ -184,14 +207,14 @@ export default function TeamsPage() {
               <h3 className="font-bold text-zinc-900 dark:text-white text-sm">{t.events}</h3>
             </div>
 
-            {(selectedTeam.events?.length ?? 0) === 0 ? (
+            {(currentTeam.events?.length ?? 0) === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center bg-zinc-50 dark:bg-zinc-900 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-700">
                 <Calendar size={40} className="text-zinc-300 dark:text-zinc-600 mb-3" />
                 <p className="text-sm text-zinc-400 dark:text-zinc-500 font-medium">{t.noTeamEvents}</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {selectedTeam.events?.map((event) => (
+                {currentTeam.events?.map((event) => (
                   <div key={event.id} className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4">
                     <h4 className="font-bold text-zinc-900 dark:text-white">{event.title}</h4>
                   </div>
@@ -256,7 +279,7 @@ export default function TeamsPage() {
           {teams.map((team) => (
             <button
               key={team.id}
-              onClick={() => setSelectedTeam(team)}
+              onClick={() => setCurrentTeam(team)}
               className="group text-left bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-lg hover:shadow-indigo-50 dark:hover:shadow-none transition-all"
             >
               <div className="flex items-start justify-between mb-4">
