@@ -1759,8 +1759,9 @@ const CreateTeam = ({ onCreated, onCancel, language }: { onCreated: (team: Team)
       id: Math.random().toString(36).substr(2, 9),
       name,
       description: desc,
-      members: 1, // Just the creator initially
-      color: colors[Math.floor(Math.random() * colors.length)]
+      members: [], // Just the creator initially
+      color: colors[Math.floor(Math.random() * colors.length)],
+      createdAt: new Date().toISOString(),
     };
     onCreated(newTeam);
   };
@@ -1864,22 +1865,22 @@ const TeamWorkspace = ({ team, onBack, language }: { team: Team, onBack: () => v
         </div>
 
         <div>
-          <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-6">{language === 'id' ? 'Anggota' : 'Members'} ({team.members})</h2>
+          <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-6">{language === 'id' ? 'Anggota' : 'Members'} ({team.members.length})</h2>
           <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800 p-6">
             <div className="space-y-4">
-              {Array.from({ length: Math.min(team.members, 5) }).map((_, j) => (
-                <div key={j} className="flex items-center gap-3">
-                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${team.name}${j}`} alt="avatar" className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800" />
+              {team.members.slice(0, 5).map((member, j) => (
+                <div key={member.id} className="flex items-center gap-3">
+                  <img src={member.photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.name}`} alt="avatar" className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800" />
                   <div>
-                    <div className="font-bold text-zinc-900 dark:text-white text-sm">Member {j + 1}</div>
-                    <div className="text-xs text-zinc-500">{j === 0 ? 'Admin' : 'Member'}</div>
+                    <div className="font-bold text-zinc-900 dark:text-white text-sm">{member.name}</div>
+                    <div className="text-xs text-zinc-500">{member.role === 'admin' ? 'Admin' : 'Member'}</div>
                   </div>
                 </div>
               ))}
-              {team.members > 5 && (
+              {team.members.length > 5 && (
                 <div className="text-center pt-4 border-t border-zinc-100 dark:border-zinc-800">
                   <button className="text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
-                    {language === 'id' ? `Lihat semua ${team.members} anggota` : `View all ${team.members} members`}
+                    {language === 'id' ? `Lihat semua ${team.members.length} anggota` : `View all ${team.members.length} members`}
                   </button>
                 </div>
               )}
@@ -1942,14 +1943,14 @@ const TeamsPage = ({
               <button className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"><ChevronRight size={20} /></button>
             </div>
             <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{team.name}</h3>
-            <p className="text-zinc-500 text-sm mb-6">{team.members} {language === 'id' ? 'Anggota' : 'Members'}</p>
+            <p className="text-zinc-500 text-sm mb-6">{team.members.length} {language === 'id' ? 'Anggota' : 'Members'}</p>
             <div className="flex -space-x-2">
-              {Array.from({ length: Math.min(team.members, 5) }).map((_, j) => (
-                <img key={j} src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${team.name}${j}`} alt="avatar" className="w-8 h-8 rounded-full border-2 border-white dark:border-zinc-900 bg-zinc-100" />
+              {team.members.slice(0, 5).map((member, j) => (
+                <img key={member.id} src={member.photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.name}`} alt="avatar" className="w-8 h-8 rounded-full border-2 border-white dark:border-zinc-900 bg-zinc-100" />
               ))}
-              {team.members > 5 && (
+              {team.members.length > 5 && (
                 <div className="w-8 h-8 rounded-full border-2 border-white dark:border-zinc-900 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-600 dark:text-zinc-400">
-                  +{team.members - 5}
+                  +{team.members.length - 5}
                 </div>
               )}
             </div>

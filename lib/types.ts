@@ -19,13 +19,23 @@ export interface Participant {
   availability: string[]; // Array of TimeSlot IDs
 }
 
+export interface TeamMember {
+  id: string;
+  name: string;
+  role: "admin" | "member";
+  photoUrl?: string;
+}
+
 export interface Team {
   id: string;
   name: string;
   description?: string;
-  members: number;
-  color: string;
+  members: TeamMember[];
+  events?: NgumpulEvent[];
+  color?: string;
+  createdAt: string;
 }
+
 
 export interface NgumpulEvent {
   id: string;
