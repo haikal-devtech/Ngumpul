@@ -1,0 +1,7 @@
+{
+  "name": "Ngumpul",
+  "description": "A smart group meeting scheduler that helps groups find the best time to meet through intuitive grids and heatmaps.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
