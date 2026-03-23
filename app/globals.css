@@ -9,6 +9,10 @@
 }
 
 @layer base {
+  html, body {
+    overflow-x: hidden;
+  }
+  
   body {
     @apply antialiased transition-colors duration-300 ease-in-out;
   }

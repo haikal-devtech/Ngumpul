@@ -32,6 +32,7 @@ export const Navbar = ({
   setLanguage: (lang: 'en' | 'id') => void
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const navItems = [
     { id: 'landing', label: language === 'id' ? 'Beranda' : 'Home' },
@@ -102,17 +103,52 @@ export const Navbar = ({
             </button>
           </div>
 
-          <motion.button 
-            whileHover={{ rotate: 15, scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="hidden sm:block text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors"
-          >
-            <Bell size={20} />
-          </motion.button>
+          <div className="relative">
+            <motion.button 
+              whileHover={{ rotate: 15, scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors relative shrink-0 flex items-center justify-center p-2"
+            >
+              <Bell size={20} />
+              {/* Notification badge mock */}
+              <span className="absolute top-1 right-2 w-2 h-2 rounded-full bg-red-500 border-2 border-white dark:border-zinc-950"></span>
+            </motion.button>
+
+            <AnimatePresence>
+              {showNotifications && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute right-0 mt-2 w-72 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden z-[60]"
+                >
+                  <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
+                    <h4 className="font-bold text-sm dark:text-white">{language === 'id' ? 'Notifikasi' : 'Notifications'}</h4>
+                    <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium cursor-pointer">{language === 'id' ? 'Tandai sudah dibaca' : 'Mark all as read'}</span>
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto p-2">
+                    {/* Mock notification item */}
+                    <div className="p-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer flex gap-3">
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-400">
+                        <Calendar size={14} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-zinc-900 dark:text-white">{language === 'id' ? 'Acara baru dibuat' : 'New event created'}</p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Coffee Catch-up Plan</p>
+                        <span className="text-[10px] text-zinc-400 mt-2 block">2 min ago</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           <button 
             onClick={toggleTheme} 
-            className="relative w-9 h-9 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-400 transition-colors overflow-hidden"
+            className="relative shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-400 transition-colors overflow-hidden"
           >
             <AnimatePresence mode="wait">
               <motion.div
@@ -131,14 +167,14 @@ export const Navbar = ({
             <motion.div 
               whileHover={{ scale: 1.02, backgroundColor: theme === 'dark' ? '#27272a' : '#f4f4f5' }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-3 cursor-pointer ml-1 sm:ml-2 bg-zinc-50 dark:bg-zinc-900 px-2 sm:px-3 py-1.5 rounded-full transition-colors border border-zinc-200 dark:border-zinc-700" 
+              className="flex items-center gap-3 cursor-pointer shrink-0 ml-1 sm:ml-2 bg-zinc-50 dark:bg-zinc-900 px-2 sm:px-3 py-1.5 rounded-full transition-colors border border-zinc-200 dark:border-zinc-700" 
               onClick={() => onNavigate('profile')}
             >
               <img src={currentUser.photoUrl} alt="Profile" className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover" />
               <span className="text-sm font-bold hidden md:block dark:text-white">{currentUser.name}</span>
             </motion.div>
           ) : (
-            <button onClick={() => onNavigate('login')} className="text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors ml-1 sm:ml-2">
+            <button onClick={() => onNavigate('login')} className="shrink-0 text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors ml-1 sm:ml-2">
               {language === 'id' ? 'Masuk' : 'Login'}
             </button>
           )}
@@ -147,14 +183,14 @@ export const Navbar = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onCreate}
-            className="hidden sm:flex bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors"
+            className="hidden sm:flex shrink-0 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors"
           >
             {language === 'id' ? 'Buat Acara' : 'Create Event'}
           </motion.button>
 
           <button 
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="flex md:hidden w-9 h-9 items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 ml-1"
+            className="flex md:hidden w-9 h-9 items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0 ml-1"
           >
             {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>

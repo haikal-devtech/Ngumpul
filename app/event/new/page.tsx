@@ -23,6 +23,8 @@ function NewEventForm() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...event,
+        slug: event.id,
+        location_name: event.location,
         date_range: event.dates,
         time_range: [event.startTime, event.endTime],
       }),
