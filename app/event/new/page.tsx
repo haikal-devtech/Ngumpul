@@ -4,8 +4,9 @@ import { CreateEvent } from "@/components/NgumpulApp";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAppContext } from "@/components/AppContext";
 import { NgumpulEvent } from "@/lib/types";
+import { Suspense } from "react";
 
-export default function NewEventPage() {
+function NewEventForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const teamId = searchParams.get("teamId") || undefined;
@@ -34,5 +35,13 @@ export default function NewEventPage() {
       language={language} 
       teamId={teamId}
     />
+  );
+}
+
+export default function NewEventPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <NewEventForm />
+    </Suspense>
   );
 }
