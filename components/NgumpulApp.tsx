@@ -29,7 +29,8 @@ export const Navbar = ({
   toggleTheme: () => void, 
   onCreate: () => void,
   language: 'en' | 'id',
-  setLanguage: (lang: 'en' | 'id') => void
+  setLanguage: (lang: 'en' | 'id') => void,
+  joinedEvents: NgumpulEvent[]
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -129,17 +130,24 @@ export const Navbar = ({
                     <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium cursor-pointer">{language === 'id' ? 'Tandai sudah dibaca' : 'Mark all as read'}</span>
                   </div>
                   <div className="max-h-[300px] overflow-y-auto p-2">
-                    {/* Mock notification item */}
-                    <div className="p-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer flex gap-3">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-400">
-                        <Calendar size={14} />
+                    {joinedEvents.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                        {language === 'id' ? 'Belum ada notifikasi baru.' : 'No new notifications.'}
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-zinc-900 dark:text-white">{language === 'id' ? 'Acara baru dibuat' : 'New event created'}</p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Coffee Catch-up Plan</p>
-                        <span className="text-[10px] text-zinc-400 mt-2 block">2 min ago</span>
-                      </div>
-                    </div>
+                    ) : (
+                      joinedEvents.map(evt => (
+                        <div key={evt.id} onClick={() => { onNavigate('event'); setShowNotifications(false); }} className="p-3 mb-2 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer flex gap-3">
+                          <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-400">
+                            <Calendar size={14} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-zinc-900 dark:text-white">{language === 'id' ? 'Anda diundang ke acara' : 'You are invited to event'}</p>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{evt.title}</p>
+                            <span className="text-[10px] text-zinc-400 mt-2 block">{language === 'id' ? 'Baru saja' : 'Just now'}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -2731,6 +2739,7 @@ export default function App() {
         onCreate={() => setView('create')}
         language={language}
         setLanguage={setLanguage}
+        joinedEvents={joinedEvents}
       />
 
       <AnimatePresence mode="wait">
@@ -2740,6 +2749,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
           >
             <LandingPage onCreate={() => setView('create')} onNavigate={(v) => setView(v as ViewState)} language={language} />
           </motion.div>
@@ -2755,9 +2765,9 @@ export default function App() {
         {view === 'contact' && <motion.div key="contact" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><ContactPage onNavigate={(v) => setView(v as ViewState)} language={language} /></motion.div>}
         {view === 'privacy' && <motion.div key="privacy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><PrivacyPage onNavigate={(v) => setView(v as ViewState)} language={language} /></motion.div>}
         {view === 'terms' && <motion.div key="terms" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><TermsPage onNavigate={(v) => setView(v as ViewState)} language={language} /></motion.div>}
-        {view === 'calendar' && <motion.div key="calendar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><CalendarPage onNavigate={(v) => setView(v as ViewState)} language={language} /></motion.div>}
-        {view === 'teams' && <motion.div key="teams" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><TeamsPage onNavigate={(v) => setView(v as ViewState)} language={language} teams={teams} onCreateTeam={() => setView('create-team')} onSelectTeam={handleSelectTeam} /></motion.div>}
-        {view === 'create-team' && <motion.div key="create-team" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}><CreateTeam onCreated={handleCreateTeam} onCancel={() => setView('teams')} language={language} /></motion.div>}
+        {view === 'calendar' && <motion.div key="calendar" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.25 }}><CalendarPage onNavigate={(v) => setView(v as ViewState)} language={language} /></motion.div>}
+        {view === 'teams' && <motion.div key="teams" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.25 }}><TeamsPage onNavigate={(v) => setView(v as ViewState)} language={language} teams={teams} onCreateTeam={() => setView('create-team')} onSelectTeam={handleSelectTeam} /></motion.div>}
+        {view === 'create-team' && <motion.div key="create-team" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.25 }}><CreateTeam onCreated={handleCreateTeam} onCancel={() => setView('teams')} language={language} /></motion.div>}
         {view === 'team-workspace' && currentTeam && (
           <motion.div key="team-workspace" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <TeamWorkspace 
@@ -2869,6 +2879,7 @@ export default function App() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.25 }}
           >
             <Dashboard 
               myEvents={myEvents.filter(e => !e.teamId)} 
