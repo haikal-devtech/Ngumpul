@@ -19,7 +19,8 @@ export const Navbar = ({
   toggleTheme, 
   onCreate,
   language,
-  setLanguage
+  setLanguage,
+  joinedEvents
 }: { 
   view: string,
   onNavigate: (view: string) => void,
