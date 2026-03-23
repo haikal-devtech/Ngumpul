@@ -63,6 +63,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         onCreate={() => router.push("/event/new")}
         language={language}
         setLanguage={setLanguage}
+        joinedEvents={joinedEvents}
       />
       <main className="flex-1">
         <AnimatePresence mode="wait">
