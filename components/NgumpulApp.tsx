@@ -782,6 +782,26 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
       addToast(language === 'id' ? 'Link berhasil disalin!' : 'Link copied to clipboard!', 'success');
     }
   };
+  
+  const getGoogleCalendarUrl = (slotId: string) => {
+    const [datePart, timePart] = slotId.split(/-(?=\d{2}:\d{2}$)/);
+    const startDate = parseISO(datePart);
+    const [startH, startM] = (timePart || '10:00').split(':').map(Number);
+    const start = new Date(startDate);
+    start.setHours(startH, startM);
+    const end = new Date(start);
+    end.setHours(start.getHours() + 2);
+    
+    const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: event.title,
+      dates: `${fmt(start)}/${fmt(end)}`,
+      details: event.description || '',
+      location: event.location || '',
+    });
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  };
 
   // Generate time slots
   const times = React.useMemo(() => {
@@ -923,6 +943,10 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
     setToastMsg(t.confirmed);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
+
+    // Automatically open Google Calendar in a new tab
+    const url = getGoogleCalendarUrl(slotId);
+    window.open(url, '_blank');
   };
 
   if (!isJoined) {
@@ -994,13 +1018,6 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
               const end = new Date(start);
               end.setHours(start.getHours() + 2);
               const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-              const gcalParams = new URLSearchParams({
-                action: 'TEMPLATE',
-                text: event.title,
-                dates: `${fmt(start)}/${fmt(end)}`,
-                details: event.description || '',
-                location: event.location || '',
-              });
               
               const handleDownloadICS = (e: React.MouseEvent) => {
                 e.preventDefault();
@@ -1035,7 +1052,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <a
-                      href={`https://calendar.google.com/calendar/render?${gcalParams.toString()}`}
+                      href={getGoogleCalendarUrl(event.confirmedSlot!)}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
