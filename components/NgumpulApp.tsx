@@ -371,7 +371,10 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
             >
               {t.btnCreate} <ChevronRight size={18} />
             </button>
-            <button className="bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 px-6 py-3 rounded-xl font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all">
+            <button 
+              onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+              className="bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 px-6 py-3 rounded-xl font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all"
+            >
               {t.btnHow}
             </button>
           </div>
@@ -434,6 +437,50 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* How it Works Section */}
+      <section id="how-it-works" className="py-24 px-4 sm:px-6 max-w-7xl mx-auto border-t border-zinc-100 dark:border-zinc-800">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-white mb-4">
+            {language === 'id' ? 'Cara Kerja Ngumpul' : 'How Ngumpul Works'}
+          </h2>
+          <p className="text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto">
+            {language === 'id' ? 'Tiga langkah mudah untuk mewujudkan pertemuan Anda.' : 'Three simple steps to make your gathering happen.'}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          {[
+            {
+              step: '01',
+              title: language === 'id' ? 'Buat & Bagikan' : 'Create & Share',
+              desc: language === 'id' ? 'Tentukan judul, lokasi, dan rentang tanggal. Bagikan link unik ke grup chat Anda.' : 'Set a title, location, and date range. Share the unique link to your group chat.',
+              icon: <Plus className="text-indigo-600" size={24} />
+            },
+            {
+              step: '02',
+              title: language === 'id' ? 'Isi Ketersediaan' : 'Fill Availability',
+              desc: language === 'id' ? 'Teman Anda memilih waktu luang mereka melalui heatmap interaktif tanpa perlu login.' : 'Friends pick their free time through the interactive heatmap without needing to login.',
+              icon: <Users className="text-indigo-600" size={24} />
+            },
+            {
+              step: '03',
+              title: language === 'id' ? 'Finalkan!' : 'Finalize!',
+              desc: language === 'id' ? 'Lihat slot waktu terbaik dan konfirmasi. Event otomatis masuk ke kalender semua orang.' : 'See the best time slots and confirm. The event is automatically added to everyone\'s calendar.',
+              icon: <CheckCircle className="text-indigo-600" size={24} />
+            }
+          ].map((item, i) => (
+            <div key={i} className="relative p-8 bg-zinc-50 dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800">
+              <div className="text-5xl font-black text-indigo-600/10 dark:text-indigo-400/10 absolute top-4 right-8">{item.step}</div>
+              <div className="w-12 h-12 bg-white dark:bg-zinc-800 rounded-2xl flex items-center justify-center shadow-sm mb-6 border border-zinc-100 dark:border-zinc-700">
+                {item.icon}
+              </div>
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-3">{item.title}</h3>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">{item.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -540,9 +587,6 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
           {t.ctaBtn}
         </button>
       </section>
-
-      {/* Footer */}
-      <Footer onNavigate={onNavigate} language={language} />
     </div>
   );
 };
@@ -642,6 +686,19 @@ export const CreateEvent = ({ onSaved, language, initialEvent, teamId }: { onSav
                 placeholder={t.locationPlaceholder}
                 className="w-full pl-12 pr-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               />
+              <button
+                type="button"
+                onClick={async () => {
+                  const { requestLocationPermission } = useAppContext();
+                  const loc = await requestLocationPermission();
+                  if (loc) {
+                    setLocation(`Lat: ${loc.lat.toFixed(4)}, Lng: ${loc.lng.toFixed(4)}`);
+                  }
+                }}
+                className="absolute right-3 top-3 px-2 py-1 text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 transition-all"
+              >
+                {language === 'id' ? 'Gunakan Lokasi Saya' : 'Use My Location'}
+              </button>
               {showAutocomplete && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-2xl z-50 overflow-hidden">
                   {mockPlaces.filter(p => p.name.toLowerCase().includes(location.toLowerCase())).map((place, i) => (
@@ -781,26 +838,6 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
     if (typeof addToast === 'function') {
       addToast(language === 'id' ? 'Link berhasil disalin!' : 'Link copied to clipboard!', 'success');
     }
-  };
-  
-  const getGoogleCalendarUrl = (slotId: string) => {
-    const [datePart, timePart] = slotId.split(/-(?=\d{2}:\d{2}$)/);
-    const startDate = parseISO(datePart);
-    const [startH, startM] = (timePart || '10:00').split(':').map(Number);
-    const start = new Date(startDate);
-    start.setHours(startH, startM);
-    const end = new Date(start);
-    end.setHours(start.getHours() + 2);
-    
-    const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const params = new URLSearchParams({
-      action: 'TEMPLATE',
-      text: event.title,
-      dates: `${fmt(start)}/${fmt(end)}`,
-      details: event.description || '',
-      location: event.location || '',
-    });
-    return `https://calendar.google.com/calendar/render?${params.toString()}`;
   };
 
   // Generate time slots
@@ -943,10 +980,6 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
     setToastMsg(t.confirmed);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
-
-    // Automatically open Google Calendar in a new tab
-    const url = getGoogleCalendarUrl(slotId);
-    window.open(url, '_blank');
   };
 
   if (!isJoined) {
@@ -1018,6 +1051,13 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
               const end = new Date(start);
               end.setHours(start.getHours() + 2);
               const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+              const gcalParams = new URLSearchParams({
+                action: 'TEMPLATE',
+                text: event.title,
+                dates: `${fmt(start)}/${fmt(end)}`,
+                details: event.description || '',
+                location: event.location || '',
+              });
               
               const handleDownloadICS = (e: React.MouseEvent) => {
                 e.preventDefault();
@@ -1052,7 +1092,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <a
-                      href={getGoogleCalendarUrl(event.confirmedSlot!)}
+                      href={`https://calendar.google.com/calendar/render?${gcalParams.toString()}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
@@ -1373,7 +1413,20 @@ export const Dashboard = ({
     <section className="pt-32 pb-20 px-4 sm:px-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">{t.title}</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">{t.title}</h2>
+            <button 
+              onClick={async () => {
+                const { requestNotificationPermission, addToast } = useAppContext();
+                const granted = await requestNotificationPermission();
+                if (granted) addToast(language === 'id' ? "Notifikasi diaktifkan!" : "Notifications enabled!", "success");
+              }}
+              className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all"
+              title={language === 'id' ? "Aktifkan Notifikasi" : "Enable Notifications"}
+            >
+              <Bell size={18} />
+            </button>
+          </div>
           <p className="text-zinc-500 dark:text-zinc-400 mt-1">{t.desc}</p>
         </div>
         <button
@@ -1712,7 +1765,6 @@ const GenericPage = ({ title, subtitle, children, onNavigate, language }: { titl
         {children}
       </div>
     </div>
-    <Footer onNavigate={onNavigate} language={language} />
   </div>
 );
 

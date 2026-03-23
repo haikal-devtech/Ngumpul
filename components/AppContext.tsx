@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { UserProfile, NgumpulEvent, Team, Toast } from '../lib/types';
+import { startOfDay, parseISO } from 'date-fns';
 
 type AppContextType = {
   currentUser: UserProfile | null;
@@ -20,6 +21,8 @@ type AppContextType = {
   setCurrentTeam: (team: Team | null) => void;
   addToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   toasts: Toast[];
+  requestNotificationPermission: () => Promise<boolean>;
+  requestLocationPermission: () => Promise<{lat: number, lng: number} | null>;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -139,6 +142,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // ── Permissions ──────────────────────────────────────────────────────────
+  const requestNotificationPermission = useCallback(async () => {
+    if (!("Notification" in window)) return false;
+    if (Notification.permission === "granted") return true;
+    const permission = await Notification.requestPermission();
+    return permission === "granted";
+  }, []);
+
+  const requestLocationPermission = useCallback(async () => {
+    return new Promise<{lat: number, lng: number} | null>((resolve) => {
+      if (!("geolocation" in navigator)) {
+        addToast("Browser tidak mendukung geolokasi", "error");
+        resolve(null);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {
+          addToast("Akses lokasi ditolak", "error");
+          resolve(null);
+        }
+      );
+    });
+  }, [addToast]);
+
+  // ── Event Reminders ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const checkReminders = () => {
+      if (!("Notification" in window) || Notification.permission !== "granted") return;
+      
+      const allEvents = [...myEvents, ...joinedEvents];
+      const today = startOfDay(new Date());
+      
+      allEvents.forEach(event => {
+        if (event.status === 'cancelled') return;
+        
+        // Find if any confirmed slot is today
+        const isToday = event.confirmedSlot && startOfDay(parseISO(event.confirmedSlot)).getTime() === today.getTime();
+
+        if (isToday) {
+          const remindedKey = `reminded_${event.id}_${today.toISOString()}`;
+          if (!localStorage.getItem(remindedKey)) {
+            new Notification(language === 'id' ? "Pengingat Acara!" : "Event Reminder!", {
+              body: language === 'id' ? `Hari ini: ${event.title}` : `Today: ${event.title}`,
+              icon: '/icon.png'
+            });
+            localStorage.setItem(remindedKey, 'true');
+          }
+        }
+      });
+    };
+
+    // Check on mount and every hour
+    checkReminders();
+    const interval = setInterval(checkReminders, 3600000);
+    return () => clearInterval(interval);
+  }, [myEvents, joinedEvents, language]);
+
   return (
     <AppContext.Provider value={{
       currentUser, setCurrentUser,
@@ -149,6 +210,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       teams, setTeams,
       currentTeam, setCurrentTeam,
       toasts, addToast,
+      requestNotificationPermission,
+      requestLocationPermission,
     }}>
       {children}
     </AppContext.Provider>
