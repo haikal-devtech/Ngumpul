@@ -1,12 +1,14 @@
 "use client";
 
 import { CreateEvent } from "@/components/NgumpulApp";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAppContext } from "@/components/AppContext";
 import { NgumpulEvent } from "@/lib/types";
 
 export default function NewEventPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const teamId = searchParams.get("teamId") || undefined;
   const { language, setMyEvents } = useAppContext();
 
   const handleSaved = async (event: NgumpulEvent) => {
@@ -30,6 +32,7 @@ export default function NewEventPage() {
     <CreateEvent 
       onSaved={handleSaved} 
       language={language} 
+      teamId={teamId}
     />
   );
 }

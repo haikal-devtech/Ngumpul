@@ -24,7 +24,7 @@ export default function DashboardPage() {
 
   return (
     <Dashboard 
-      myEvents={myEvents} 
+      myEvents={myEvents.filter(e => !e.teamId)} 
       joinedEvents={joinedEvents} 
       onSelectEvent={handleSelectEvent}
       onCreateNew={() => router.push("/event/new")}

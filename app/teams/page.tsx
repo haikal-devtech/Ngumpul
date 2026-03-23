@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Plus, ChevronRight, Star, Crown, Calendar, Hash, Trash2 } from "lucide-react";
+import { Users, Plus, ChevronRight, Star, Crown, Calendar, Hash, Trash2, Clock } from "lucide-react";
 import { useAppContext } from "@/components/AppContext";
 import { Team } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -84,7 +84,7 @@ function CreateTeamModal({ onCreated, onCancel, language }: { onCreated: (team: 
 // --- Main Teams Page ---
 export default function TeamsPage() {
   const router = useRouter();
-  const { language, currentUser, teams, setTeams, currentTeam, setCurrentTeam } = useAppContext();
+  const { language, currentUser, teams, setTeams, currentTeam, setCurrentTeam, myEvents } = useAppContext();
   const [showCreate, setShowCreate] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
 
@@ -197,7 +197,9 @@ export default function TeamsPage() {
             </div>
 
             <div className="bg-violet-50 dark:bg-violet-900/20 rounded-2xl border border-violet-100 dark:border-violet-800/30 p-5 text-center">
-              <div className="text-3xl font-black text-violet-600 dark:text-violet-400 mb-1">{currentTeam.events?.length ?? 0}</div>
+              <div className="text-3xl font-black text-violet-600 dark:text-violet-400 mb-1">
+                {myEvents.filter(e => e.teamId === currentTeam.id).length}
+              </div>
               <div className="text-xs font-bold text-violet-400 uppercase tracking-wider">{t.events}</div>
             </div>
           </div>
@@ -209,20 +211,37 @@ export default function TeamsPage() {
               <h3 className="font-bold text-zinc-900 dark:text-white text-sm">{t.events}</h3>
             </div>
 
-            {(currentTeam.events?.length ?? 0) === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center bg-zinc-50 dark:bg-zinc-900 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-700">
-                <Calendar size={40} className="text-zinc-300 dark:text-zinc-600 mb-3" />
-                <p className="text-sm text-zinc-400 dark:text-zinc-500 font-medium">{t.noTeamEvents}</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {currentTeam.events?.map((event) => (
-                  <div key={event.id} className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4">
-                    <h4 className="font-bold text-zinc-900 dark:text-white">{event.title}</h4>
+            {(() => {
+              const teamEvents = myEvents.filter(e => e.teamId === currentTeam.id);
+              if (teamEvents.length === 0) {
+                return (
+                  <div className="flex flex-col items-center justify-center py-16 text-center bg-zinc-50 dark:bg-zinc-900 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-700">
+                    <Calendar size={40} className="text-zinc-300 dark:text-zinc-600 mb-3" />
+                    <p className="text-sm text-zinc-400 dark:text-zinc-500 font-medium">{t.noTeamEvents}</p>
                   </div>
-                ))}
-              </div>
-            )}
+                );
+              }
+              return (
+                <div className="space-y-3">
+                  {teamEvents.map((event) => (
+                    <button 
+                      key={event.id} 
+                      onClick={() => router.push(`/event/${event.id}`)}
+                      className="w-full text-left bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all flex items-center justify-between group"
+                    >
+                      <div>
+                        <h4 className="font-bold text-zinc-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{event.title}</h4>
+                        <div className="text-xs text-zinc-400 mt-1 flex items-center gap-2">
+                          <Clock size={12} />
+                          {event.startTime} - {event.endTime}
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-zinc-300 group-hover:text-indigo-500 transition-colors" />
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -301,7 +320,7 @@ export default function TeamsPage() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Calendar size={11} />
-                  {team.events?.length ?? 0} {t.events}
+                  {myEvents.filter(e => e.teamId === team.id).length} {t.events}
                 </span>
               </div>
             </button>
