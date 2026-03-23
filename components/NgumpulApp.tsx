@@ -409,9 +409,7 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
   return (
     <div className="w-full bg-white dark:bg-zinc-950 font-sans pt-20">
       {/* Hero Section */}
-      <motion.section 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+      <section 
         className="pt-20 pb-20 px-4 sm:px-6 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
       >
         <motion.div 
@@ -506,7 +504,7 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
             </div>
           </div>
         </div>
-      </motion.section>
+      </section>
 
       {/* How it Works Section */}
       <motion.section 
@@ -2743,7 +2741,7 @@ export default function App() {
         joinedEvents={joinedEvents}
       />
 
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="popLayout" initial={false}>
         {view === 'landing' && (
           <motion.div
             key="landing"

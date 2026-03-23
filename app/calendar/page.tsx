@@ -46,11 +46,7 @@ export default function CalendarPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950 pt-24 pb-20 px-4 sm:px-6 max-w-6xl mx-auto">
       {/* Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-10"
-      >
+      <div className="mb-10">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
             <Calendar size={20} />
@@ -58,16 +54,11 @@ export default function CalendarPage() {
           <h1 className="text-3xl font-extrabold text-zinc-900 dark:text-white">{t.title}</h1>
         </div>
         <p className="text-zinc-400 dark:text-zinc-500 ml-13 pl-1">{t.subtitle}</p>
-      </motion.div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Calendar Grid */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-          className="lg:col-span-2 bg-zinc-50 dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6"
-        >
+        <div className="lg:col-span-2 bg-zinc-50 dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6">
           {/* Month Navigator */}
           <div className="flex items-center justify-between mb-6">
             <button
@@ -148,7 +139,7 @@ export default function CalendarPage() {
               <span>{t.today}</span>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Sidebar: Events for selected day */}
         <motion.div 
