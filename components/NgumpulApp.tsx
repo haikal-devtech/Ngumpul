@@ -1322,7 +1322,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
                         </div>
                       </div>
                       
-                      {!event.confirmedSlot && (
+                      {!event.confirmedSlot && event.role === 'host' && (
                         <button
                           onClick={() => handleConfirmSlot(slotId)}
                           className="w-full bg-violet-600 hover:bg-violet-700 text-white py-2 rounded-lg text-xs font-bold transition-all shadow-sm"
@@ -1478,7 +1478,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
                             </div>
                           )}
 
-                          {viewMode === 'heatmap' && !event.confirmedSlot && hoveredSlot === slotId && heatmapCount > 0 && (
+                          {viewMode === 'heatmap' && !event.confirmedSlot && hoveredSlot === slotId && heatmapCount > 0 && event.role === 'host' && (
                             <div 
                               className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-[60] flex flex-col items-center"
                               onMouseEnter={() => setHoveredSlot(slotId)}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/auth";
 
 export async function GET(
   req: NextRequest,
@@ -7,6 +8,8 @@ export async function GET(
 ) {
   try {
     const slug = (await params).slug;
+    const session = await auth();
+
     const event = await prisma.event.findUnique({
       where: { slug },
       include: {
@@ -22,7 +25,9 @@ export async function GET(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    // Map Prisma model to NgumpulEvent structure needed by the frontend
+    // Determine role: host if the logged-in user is the creator, else guest
+    const isHost = session?.user?.id === event.host_id;
+
     const mappedEvent = {
       id: event.slug,
       title: event.title,
@@ -32,10 +37,10 @@ export async function GET(
       startTime: event.time_range ? (event.time_range as string[])[0] : "09:00",
       endTime: event.time_range ? (event.time_range as string[])[1] : "21:00",
       status: 'active',
-      role: 'guest', // Defaults to guest for anyone loading via API link
+      role: isHost ? 'host' : 'guest',
       confirmedSlot: event.confirmed_slot || undefined,
       participants: event.participants.map(p => ({
-        id: p.user_id || p.id, // Fallback to participant node ID if guest
+        id: p.user_id || p.id,
         name: p.guest_name || 'Anonymous',
         availability: p.availabilities.filter(a => a.is_available).map(a => a.slot_datetime),
         photoUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.guest_name || 'Anonymous'}`
@@ -55,6 +60,7 @@ export async function PUT(
 ) {
   try {
     const slug = (await params).slug;
+    const session = await auth();
     const body = await req.json();
     
     const event = await prisma.event.findUnique({
@@ -65,23 +71,26 @@ export async function PUT(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    await prisma.$transaction(async (tx) => {
-      // 1. Update event core data
-      await tx.event.update({
-        where: { id: event.id },
-        data: {
-          confirmed_slot: body.confirmedSlot || null,
-          title: body.title,
-          desc: body.description,
-        }
-      });
+    const isHost = session?.user?.id === event.host_id;
 
-      // 2. Clear old participants (cascade deletes their availabilities)
+    await prisma.$transaction(async (tx) => {
+      // Only the host can finalize/confirm/cancel the event
+      if (isHost) {
+        await tx.event.update({
+          where: { id: event.id },
+          data: {
+            confirmed_slot: body.confirmedSlot !== undefined ? (body.confirmedSlot || null) : event.confirmed_slot,
+            title: body.title,
+            desc: body.description,
+          }
+        });
+      }
+
+      // Any participant (host or guest) can update availability roster
       await tx.participant.deleteMany({
         where: { event_id: event.id }
       });
 
-      // 3. Insert new participants
       if (body.participants && Array.isArray(body.participants)) {
         for (const p of body.participants) {
           await tx.participant.create({

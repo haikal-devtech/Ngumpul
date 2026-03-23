@@ -4,13 +4,21 @@ import { CreateEvent } from "@/components/NgumpulApp";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAppContext } from "@/components/AppContext";
 import { NgumpulEvent } from "@/lib/types";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 
 function NewEventForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const teamId = searchParams.get("teamId") || undefined;
   const { language, setMyEvents, currentUser, addToast } = useAppContext();
+
+  // Block unauthenticated users from accessing the create form
+  useEffect(() => {
+    if (currentUser === null) {
+      addToast(language === 'id' ? "Silakan masuk untuk membuat acara." : "Please log in to create events.", "error");
+      router.replace("/login");
+    }
+  }, [currentUser, router, addToast, language]);
 
   const handleSaved = async (event: NgumpulEvent) => {
     if (!currentUser) {
@@ -41,6 +49,11 @@ function NewEventForm() {
       addToast(language === 'id' ? "Gagal menyimpan acara." : "Failed to save the event.", "error");
     }
   };
+
+  // Don't render the form if the user is not logged in
+  if (!currentUser) {
+    return <div className="flex items-center justify-center min-h-screen">Redirecting to login...</div>;
+  }
 
   return (
     <CreateEvent 
