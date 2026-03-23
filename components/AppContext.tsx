@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { UserProfile, NgumpulEvent, Team } from '../lib/types';
+import { UserProfile, NgumpulEvent, Team, Toast } from '../lib/types';
 
 type AppContextType = {
   currentUser: UserProfile | null;
@@ -18,6 +18,8 @@ type AppContextType = {
   setTeams: React.Dispatch<React.SetStateAction<Team[]>>;
   currentTeam: Team | null;
   setCurrentTeam: (team: Team | null) => void;
+  addToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  toasts: Toast[];
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -71,6 +73,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentTeam, setCurrentTeamRaw] = useState<Team | null>(() =>
     loadFromStorage<Team | null>('ngumpul_currentTeam', null)
   );
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const addToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  }, []);
 
   // ── Wrapped setters: persist + deduplicate on every write ──────────────────
   const setMyEvents: React.Dispatch<React.SetStateAction<NgumpulEvent[]>> = useCallback((action) => {
@@ -137,6 +148,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       joinedEvents, setJoinedEvents,
       teams, setTeams,
       currentTeam, setCurrentTeam,
+      toasts, addToast,
     }}>
       {children}
     </AppContext.Provider>

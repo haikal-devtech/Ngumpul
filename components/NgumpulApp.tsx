@@ -4,8 +4,9 @@ import React, { useState } from 'react';
 import { Calendar, Clock, MapPin, Users, ChevronRight, ChevronLeft, Plus, Share2, Check, UserCircle, LogOut, CheckCircle, Mail, Lock, Key, Camera, Trash2, Sun, Moon, Search, Bell, Menu, X } from 'lucide-react';
 import { format, addDays, startOfDay, eachDayOfInterval, parseISO } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
-import { NgumpulEvent, Participant, UserProfile, Team } from '../lib/types';
+import { NgumpulEvent, Participant, UserProfile, Team, TeamMember, Toast } from '../lib/types';
 import { cn } from '../lib/utils';
+import { useAppContext } from './AppContext';
 
 // --- Components ---
 
@@ -546,7 +547,7 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
   );
 };
 
-export const CreateEvent = ({ onSaved, language, initialEvent }: { onSaved: (event: NgumpulEvent) => void, language: 'en' | 'id', initialEvent?: NgumpulEvent }) => {
+export const CreateEvent = ({ onSaved, language, initialEvent, teamId }: { onSaved: (event: NgumpulEvent) => void, language: 'en' | 'id', initialEvent?: NgumpulEvent, teamId?: string }) => {
   const [title, setTitle] = useState(initialEvent?.title || '');
   const [desc, setDesc] = useState(initialEvent?.description || '');
   const [location, setLocation] = useState(initialEvent?.location || '');
@@ -593,7 +594,8 @@ export const CreateEvent = ({ onSaved, language, initialEvent }: { onSaved: (eve
       dates,
       startTime,
       endTime,
-      participants: initialEvent?.participants || []
+      participants: initialEvent?.participants || [],
+      teamId: initialEvent?.teamId || teamId
     };
     onSaved(newEvent);
   };
@@ -725,6 +727,7 @@ export const CreateEvent = ({ onSaved, language, initialEvent }: { onSaved: (eve
 };
 
 export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { event: NgumpulEvent, currentUser: UserProfile | null, language: 'en' | 'id', onUpdateEvent: (e: NgumpulEvent) => void }) => {
+  const { addToast, language: ctxLanguage } = useAppContext();
   const [name, setName] = useState(currentUser?.name || '');
   const [isJoined, setIsJoined] = useState(false); // Check if current user is already in participants
   
@@ -768,10 +771,13 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
   };
 
   const handleCopyLink = () => {
-    const url = `${window.location.origin}/e/${event.id}`;
+    const url = `${window.location.origin}/event/${event.id}`;
     navigator.clipboard.writeText(url);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
+    if (typeof addToast === 'function') {
+      addToast(language === 'id' ? 'Link berhasil disalin!' : 'Link copied to clipboard!', 'success');
+    }
   };
 
   // Generate time slots
@@ -1106,7 +1112,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
             </h3>
             <p className="text-indigo-100 dark:text-indigo-50 text-xs mb-4">{t.inviteFriends}</p>
             <div className="bg-white/10 rounded-xl p-3 flex items-center justify-between gap-2">
-              <span className="text-xs truncate opacity-80">{window.location.origin}/e/{event.id}</span>
+              <span className="text-xs truncate opacity-80">{window.location.origin}/event/{event.id}</span>
               <button 
                 onClick={handleCopyLink}
                 className="bg-white text-indigo-600 dark:text-indigo-500 px-3 py-1 rounded-lg text-xs font-bold transition-colors hover:bg-indigo-50"
@@ -2023,7 +2029,21 @@ const CreateTeam = ({ onCreated, onCancel, language }: { onCreated: (team: Team)
   );
 };
 
-const TeamWorkspace = ({ team, onBack, language }: { team: Team, onBack: () => void, language: 'en' | 'id' }) => {
+const TeamWorkspace = ({ team, teamEvents, onBack, onCreateEvent, onSelectEvent }: { team: Team, teamEvents: NgumpulEvent[], onBack: () => void, onCreateEvent: () => void, onSelectEvent: (e: NgumpulEvent) => void }) => {
+  const { addToast, language } = useAppContext();
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [invitedStatus, setInvitedStatus] = useState(false);
+
+  const handleInvite = (e: React.FormEvent) => {
+    e.preventDefault();
+    setInvitedStatus(true);
+    setTimeout(() => {
+      setInvitedStatus(false);
+      setShowInviteModal(false);
+      setInviteEmail('');
+    }, 2000);
+  };
   return (
     <section className="pt-32 pb-20 px-4 sm:px-6 max-w-5xl mx-auto">
       <button 
@@ -2046,11 +2066,17 @@ const TeamWorkspace = ({ team, onBack, language }: { team: Team, onBack: () => v
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button className="bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-4 py-2 rounded-xl font-bold text-sm hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2">
+            <button 
+              onClick={() => setShowInviteModal(true)}
+              className="bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-4 py-2 rounded-xl font-bold text-sm hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2"
+            >
               <Users size={16} />
               {language === 'id' ? 'Undang' : 'Invite'}
             </button>
-            <button className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors flex items-center gap-2">
+            <button 
+              onClick={onCreateEvent}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors flex items-center gap-2"
+            >
               <Plus size={16} />
               {language === 'id' ? 'Event Baru' : 'New Event'}
             </button>
@@ -2062,11 +2088,74 @@ const TeamWorkspace = ({ team, onBack, language }: { team: Team, onBack: () => v
         <div className="lg:col-span-2 space-y-6">
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">{language === 'id' ? 'Event Tim' : 'Team Events'}</h2>
           
-          <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800">
-            <Calendar className="mx-auto text-zinc-300 dark:text-zinc-600 mb-4" size={48} />
-            <h3 className="text-lg font-bold text-zinc-400 dark:text-zinc-500">{language === 'id' ? 'Belum ada event' : 'No events yet'}</h3>
-            <p className="text-zinc-400 dark:text-zinc-500 text-sm mt-1">{language === 'id' ? 'Buat event pertama untuk tim ini.' : 'Create the first event for this team.'}</p>
+          <div className="grid grid-cols-1 gap-4">
+            {teamEvents.length === 0 ? (
+              <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800">
+                <Calendar className="mx-auto text-zinc-300 dark:text-zinc-600 mb-4" size={48} />
+                <h3 className="text-lg font-bold text-zinc-400 dark:text-zinc-500">{language === 'id' ? 'Belum ada event' : 'No events yet'}</h3>
+                <p className="text-zinc-400 dark:text-zinc-500 text-sm mt-1">{language === 'id' ? 'Buat event pertama untuk tim ini.' : 'Create the first event for this team.'}</p>
+              </div>
+            ) : (
+              teamEvents.map((event) => (
+                <div 
+                  key={event.id}
+                  onClick={() => onSelectEvent(event)}
+                  className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 hover:shadow-md transition-all cursor-pointer flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center">
+                      <Calendar size={24} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-zinc-900 dark:text-white">{event.title}</h4>
+                      <div className="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                        <span className="flex items-center gap-1"><Users size={12} /> {event.participants.length}</span>
+                        <span className="flex items-center gap-1"><MapPin size={12} /> {event.location || (language === 'id' ? 'TBD' : 'TBD')}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight size={20} className="text-zinc-300" />
+                </div>
+              ))
+            )}
           </div>
+
+          {/* Invite Modal */}
+          <AnimatePresence>
+            {showInviteModal && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowInviteModal(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+                <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative bg-white dark:bg-zinc-900 rounded-3xl p-8 shadow-2xl max-w-md w-full border border-zinc-100 dark:border-zinc-800">
+                  <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">{language === 'id' ? 'Undang Anggota Tim' : 'Invite Team Members'}</h3>
+                  <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-6">{language === 'id' ? 'Masukkan email rekan tim Anda untuk bergabung ke ruang kerja ini.' : 'Enter your teammate\'s email to join this workspace.'}</p>
+                  
+                  {invitedStatus ? (
+                    <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 rounded-xl flex items-center justify-center gap-2 font-bold mb-4">
+                      <CheckCircle size={20} />
+                      {language === 'id' ? 'Undangan Terkirim!' : 'Invitation Sent!'}
+                    </div>
+                  ) : (
+                    <form onSubmit={handleInvite} className="space-y-4">
+                      <div>
+                        <input 
+                          required 
+                          type="email" 
+                          value={inviteEmail}
+                          onChange={e => setInviteEmail(e.target.value)}
+                          placeholder="name@company.com" 
+                          className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-zinc-900 dark:text-white"
+                        />
+                      </div>
+                      <div className="flex gap-3">
+                        <button type="button" onClick={() => setShowInviteModal(false)} className="flex-1 px-4 py-4 rounded-xl font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">{language === 'id' ? 'Batal' : 'Cancel'}</button>
+                        <button type="submit" className="flex-1 px-4 py-4 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">{language === 'id' ? 'Kirim' : 'Send Invitation'}</button>
+                      </div>
+                    </form>
+                  )}
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div>
@@ -2094,6 +2183,30 @@ const TeamWorkspace = ({ team, onBack, language }: { team: Team, onBack: () => v
         </div>
       </div>
     </section>
+  );
+};
+
+export const ToastContainer = ({ toasts }: { toasts: Toast[] }) => {
+  return (
+    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] space-y-2 w-full max-w-sm px-4 pointer-events-none">
+      <AnimatePresence>
+        {toasts.map((toast) => (
+          <motion.div
+            key={toast.id}
+            initial={{ opacity: 0, y: 50, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className={cn(
+              "px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-sm bg-zinc-900 text-white pointer-events-auto"
+            )}
+          >
+            {toast.type === 'success' && <CheckCircle size={18} className="text-emerald-400" />}
+            {toast.type === 'error' && <X size={18} className="text-rose-400" />}
+            {toast.message}
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
   );
 };
 
@@ -2171,14 +2284,17 @@ const TeamsPage = ({
 export default function App() {
   type ViewState = 'landing' | 'create' | 'edit' | 'event' | 'dashboard' | 'login' | 'profile' | 'features' | 'integrations' | 'enterprise' | 'pricing' | 'about' | 'careers' | 'journal' | 'contact' | 'privacy' | 'terms' | 'calendar' | 'teams' | 'create-team' | 'team-workspace';
   const [view, setView] = useState<ViewState>('landing');
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [currentEvent, setCurrentEvent] = useState<NgumpulEvent | null>(null);
-  const [myEvents, setMyEvents] = useState<NgumpulEvent[]>([]);
   const [joinedEvents, setJoinedEvents] = useState<NgumpulEvent[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [currentTeam, setCurrentTeam] = useState<Team | null>(null);
+  const { 
+    teams, setTeams, 
+    currentUser, setCurrentUser, 
+    currentTeam, setCurrentTeam, 
+    toasts, addToast, 
+    language, setLanguage, 
+    myEvents, setMyEvents 
+  } = useAppContext();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [language, setLanguage] = useState<'en' | 'id'>('en');
   const [showLangPopup, setShowLangPopup] = useState(false);
 
   React.useEffect(() => {
@@ -2231,6 +2347,7 @@ export default function App() {
     setMyEvents(prev => [eventWithMocks, ...prev]);
     setCurrentEvent(eventWithMocks);
     setView('event');
+    addToast(language === 'id' ? 'Event berhasil dibuat!' : 'Event created successfully!', 'success');
   };
 
   const handleUpdateEvent = (updatedEvent: NgumpulEvent) => {
@@ -2354,7 +2471,23 @@ export default function App() {
         {view === 'calendar' && <motion.div key="calendar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><CalendarPage onNavigate={(v) => setView(v as ViewState)} language={language} /></motion.div>}
         {view === 'teams' && <motion.div key="teams" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><TeamsPage onNavigate={(v) => setView(v as ViewState)} language={language} teams={teams} onCreateTeam={() => setView('create-team')} onSelectTeam={handleSelectTeam} /></motion.div>}
         {view === 'create-team' && <motion.div key="create-team" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}><CreateTeam onCreated={handleCreateTeam} onCancel={() => setView('teams')} language={language} /></motion.div>}
-        {view === 'team-workspace' && currentTeam && <motion.div key="team-workspace" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}><TeamWorkspace team={currentTeam} onBack={() => setView('teams')} language={language} /></motion.div>}
+        {view === 'team-workspace' && currentTeam && (
+          <motion.div key="team-workspace" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            <TeamWorkspace 
+              team={currentTeam} 
+              teamEvents={myEvents.filter(e => e.teamId === currentTeam.id)}
+              onBack={() => {
+                setCurrentTeam(null);
+                setView('teams');
+              }} 
+              onCreateEvent={() => setView('create')}
+              onSelectEvent={(e) => {
+                setCurrentEvent(e);
+                setView('event');
+              }}
+            />
+          </motion.div>
+        )}
 
         {view === 'create' && (
           <motion.div
@@ -2363,7 +2496,13 @@ export default function App() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
           >
-            <CreateEvent onSaved={handleCreateEvent} language={language} />
+            <CreateEvent 
+              onSaved={(e) => {
+                handleCreateEvent(e);
+              }} 
+              language={language} 
+              teamId={currentTeam?.id}
+            />
           </motion.div>
         )}
 
@@ -2445,13 +2584,16 @@ export default function App() {
             exit={{ opacity: 0, y: -20 }}
           >
             <Dashboard 
-              myEvents={myEvents} 
+              myEvents={myEvents.filter(e => !e.teamId)} 
               joinedEvents={joinedEvents} 
               onSelectEvent={(e) => {
                 setCurrentEvent(e);
                 setView('event');
               }}
-              onCreateNew={() => setView('create')}
+              onCreateNew={() => {
+                setCurrentTeam(null);
+                setView('create');
+              }}
               onDeleteEvent={handleDeleteEvent}
               onEditEvent={(e) => {
                 setCurrentEvent(e);
@@ -2466,6 +2608,8 @@ export default function App() {
       <footer className="py-10 px-6 border-t border-zinc-100 dark:border-zinc-800 text-center text-zinc-400 dark:text-zinc-500 text-sm">
         <p>&copy; 2026 Ngumpul. Dibuat dengan ❤️ untuk komunitas Indonesia.</p>
       </footer>
+
+      <ToastContainer toasts={toasts} />
     </div>
   );
 }

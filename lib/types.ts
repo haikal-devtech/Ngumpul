@@ -47,4 +47,11 @@ export interface NgumpulEvent {
   endTime: string; // "22:00"
   participants: Participant[];
   confirmedSlot?: string;
+  teamId?: string;
+}
+
+export interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info';
 }

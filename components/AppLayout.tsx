@@ -4,13 +4,13 @@ import React, { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useAppContext } from "./AppContext";
-import { Navbar, Footer } from "./NgumpulApp";
+import { Navbar, Footer, ToastContainer } from "./NgumpulApp";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session, status } = useSession();
-  const { currentUser, setCurrentUser, language, setLanguage, theme, toggleTheme, myEvents, joinedEvents } = useAppContext();
+  const { currentUser, setCurrentUser, language, setLanguage, theme, toggleTheme, myEvents, joinedEvents, toasts } = useAppContext();
 
   useEffect(() => {
     if (session?.user && !currentUser) {
@@ -70,6 +70,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         onNavigate={handleNavigate} 
         language={language}
       />
+      <ToastContainer toasts={toasts} />
     </div>
   );
 }
