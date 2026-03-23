@@ -7,6 +7,7 @@ import { useAppContext } from "@/components/AppContext";
 import { Team } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { motion, AnimatePresence } from "motion/react";
 
 // --- CreateTeam Mini-Component ---
 function CreateTeamModal({ onCreated, onCancel, language }: { onCreated: (team: Team) => void; onCancel: () => void; language: "en" | "id" }) {
@@ -44,8 +45,17 @@ function CreateTeamModal({ onCreated, onCancel, language }: { onCreated: (team: 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-      <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-8 w-full max-w-md shadow-2xl">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+    >
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-8 w-full max-w-md shadow-2xl"
+      >
         <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-6">{t.title}</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -68,16 +78,27 @@ function CreateTeamModal({ onCreated, onCancel, language }: { onCreated: (team: 
             />
           </div>
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onCancel} className="flex-1 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+            <motion.button 
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              type="button" 
+              onClick={onCancel} 
+              className="flex-1 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+            >
               {t.cancel}
-            </button>
-            <button type="submit" className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors">
+            </motion.button>
+            <motion.button 
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit" 
+              className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors"
+            >
               {t.create}
-            </button>
+            </motion.button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -133,8 +154,15 @@ export default function TeamsPage() {
           {t.back}
         </button>
 
-        <div className="flex items-start justify-between gap-4 mb-10">
-          <div>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex items-start justify-between gap-4 mb-10"
+        >
+          <motion.div
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+          >
             <div className="flex items-center gap-3 mb-2">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-black text-xl">
                 {currentTeam.name[0].toUpperCase()}
@@ -146,27 +174,35 @@ export default function TeamsPage() {
                 )}
               </div>
             </div>
-          </div>
-          <div className="flex flex-col items-end gap-2">
+          </motion.div>
+          <motion.div 
+            initial={{ x: 20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            className="flex flex-col items-end gap-2"
+          >
             <div className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0">
               {t.created} {format(new Date(currentTeam.createdAt), "d MMM yyyy")}
             </div>
             <div className="flex gap-2">
-               <button
+               <motion.button
+                 whileHover={{ scale: 1.05 }}
+                 whileTap={{ scale: 0.95 }}
                  onClick={handleCopyInvite}
                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${inviteCopied ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
                >
                  {inviteCopied ? (language === 'id' ? '✓ Tautan Disalin!' : '✓ Link Copied!') : (language === 'id' ? 'Undang Anggota' : 'Invite Members')}
-               </button>
-               <button
+               </motion.button>
+               <motion.button
+                 whileHover={{ scale: 1.05 }}
+                 whileTap={{ scale: 0.95 }}
                  className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition"
                  onClick={() => router.push(`/event/new?teamId=${currentTeam.id}`)}
                >
                  {language === 'id' ? '+ Acara Baru' : '+ New Event'}
-               </button>
+               </motion.button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Stats */}
@@ -260,7 +296,11 @@ export default function TeamsPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-10">
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-start justify-between mb-10"
+      >
         <div>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-2xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 dark:text-violet-400">
@@ -270,38 +310,64 @@ export default function TeamsPage() {
           </div>
           <p className="text-zinc-400 dark:text-zinc-500 pl-1">{t.subtitle}</p>
         </div>
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => setShowCreate(true)}
           className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 dark:shadow-none"
         >
           <Plus size={16} />
           {t.createTeam}
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {/* Teams grid */}
       {teams.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center justify-center py-24 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-3xl"
+        >
           <div className="w-16 h-16 rounded-2xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center text-violet-300 dark:text-violet-600 mb-4">
             <Users size={32} />
           </div>
           <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2">{t.noTeams}</h3>
           <p className="text-sm text-zinc-400 dark:text-zinc-500 mb-6 max-w-xs">{t.noTeamsDesc}</p>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors"
           >
             <Plus size={16} />
             {t.createTeam}
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <motion.div 
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.1
+              }
+            }
+          }}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+        >
           {teams.map((team) => (
-            <button
+            <motion.button
               key={team.id}
+              variants={{
+                hidden: { y: 20, opacity: 0 },
+                show: { y: 0, opacity: 1 }
+              }}
+              whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
               onClick={() => setCurrentTeam(team)}
-              className="group text-left bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-lg hover:shadow-indigo-50 dark:hover:shadow-none transition-all"
+              className="group text-left bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-black text-xl">
@@ -323,9 +389,9 @@ export default function TeamsPage() {
                   {myEvents.filter(e => e.teamId === team.id).length} {t.events}
                 </span>
               </div>
-            </button>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   );

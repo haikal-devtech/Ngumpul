@@ -102,9 +102,13 @@ export const Navbar = ({
             </button>
           </div>
 
-          <button className="hidden sm:block text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors">
+          <motion.button 
+            whileHover={{ rotate: 15, scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="hidden sm:block text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors"
+          >
             <Bell size={20} />
-          </button>
+          </motion.button>
 
           <button 
             onClick={toggleTheme} 
@@ -124,22 +128,29 @@ export const Navbar = ({
           </button>
 
           {currentUser ? (
-            <div className="flex items-center gap-3 cursor-pointer ml-1 sm:ml-2 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 px-2 sm:px-3 py-1.5 rounded-full transition-colors border border-zinc-200 dark:border-zinc-700" onClick={() => onNavigate('profile')}>
+            <motion.div 
+              whileHover={{ scale: 1.02, backgroundColor: theme === 'dark' ? '#27272a' : '#f4f4f5' }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-3 cursor-pointer ml-1 sm:ml-2 bg-zinc-50 dark:bg-zinc-900 px-2 sm:px-3 py-1.5 rounded-full transition-colors border border-zinc-200 dark:border-zinc-700" 
+              onClick={() => onNavigate('profile')}
+            >
               <img src={currentUser.photoUrl} alt="Profile" className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover" />
               <span className="text-sm font-bold hidden md:block dark:text-white">{currentUser.name}</span>
-            </div>
+            </motion.div>
           ) : (
             <button onClick={() => onNavigate('login')} className="text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors ml-1 sm:ml-2">
               {language === 'id' ? 'Masuk' : 'Login'}
             </button>
           )}
 
-          <button 
+          <motion.button 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={onCreate}
             className="hidden sm:flex bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors"
           >
             {language === 'id' ? 'Buat Acara' : 'Create Event'}
-          </button>
+          </motion.button>
 
           <button 
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -353,8 +364,16 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
   return (
     <div className="w-full bg-white dark:bg-zinc-950 font-sans pt-20">
       {/* Hero Section */}
-      <section className="pt-20 pb-20 px-4 sm:px-6 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-        <div>
+      <motion.section 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="pt-20 pb-20 px-4 sm:px-6 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
+      >
+        <motion.div 
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        >
           <div className="inline-flex items-center gap-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full text-xs font-bold tracking-wide mb-6">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> {t.badge}</span>
           </div>
@@ -365,20 +384,24 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
             {t.desc}
           </p>
           <div className="flex flex-wrap items-center gap-4">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={onCreate}
               className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
             >
               {t.btnCreate} <ChevronRight size={18} />
-            </button>
-            <button 
+            </motion.button>
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
               className="bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 px-6 py-3 rounded-xl font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all"
             >
               {t.btnHow}
-            </button>
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
         
         {/* Right side graphic */}
         <div className="relative w-full aspect-square max-w-lg mx-auto lg:ml-auto">
@@ -438,10 +461,17 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* How it Works Section */}
-      <section id="how-it-works" className="py-24 px-4 sm:px-6 max-w-7xl mx-auto border-t border-zinc-100 dark:border-zinc-800">
+      <motion.section 
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        id="how-it-works" 
+        className="py-24 px-4 sm:px-6 max-w-7xl mx-auto border-t border-zinc-100 dark:border-zinc-800"
+      >
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-white mb-4">
             {language === 'id' ? 'Cara Kerja Ngumpul' : 'How Ngumpul Works'}
@@ -451,7 +481,21 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+        <motion.div 
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.2
+              }
+            }
+          }}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-12"
+        >
           {[
             {
               step: '01',
@@ -472,42 +516,78 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
               icon: <CheckCircle className="text-indigo-600" size={24} />
             }
           ].map((item, i) => (
-            <div key={i} className="relative p-8 bg-zinc-50 dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800">
+            <motion.div 
+              key={i} 
+              variants={{
+                hidden: { y: 30, opacity: 0 },
+                show: { y: 0, opacity: 1 }
+              }}
+              className="relative p-8 bg-zinc-50 dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800"
+            >
               <div className="text-5xl font-black text-indigo-600/10 dark:text-indigo-400/10 absolute top-4 right-8">{item.step}</div>
               <div className="w-12 h-12 bg-white dark:bg-zinc-800 rounded-2xl flex items-center justify-center shadow-sm mb-6 border border-zinc-100 dark:border-zinc-700">
                 {item.icon}
               </div>
               <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-3">{item.title}</h3>
               <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">{item.desc}</p>
-            </div>
+            </motion.div>
           ))}
-        </div>
-      </section>
+        </motion.div>
+      </motion.section>
 
       {/* Features Section */}
-      <section className="py-24 px-4 sm:px-6 max-w-5xl mx-auto text-center">
-        <h2 className="text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-white mb-4">{t.featTitle}</h2>
-        <p className="text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto mb-16">{t.featDesc}</p>
+      <motion.section 
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8 }}
+        className="py-24 px-4 sm:px-6 max-w-5xl mx-auto text-center"
+      >
+        <motion.h2 
+          initial={{ y: 20, opacity: 0 }}
+          whileInView={{ y: 0, opacity: 1 }}
+          viewport={{ once: true }}
+          className="text-3xl md:text-4xl font-extrabold text-zinc-900 dark:text-white mb-4"
+        >
+          {t.featTitle}
+        </motion.h2>
+        <motion.p 
+          initial={{ y: 20, opacity: 0 }}
+          whileInView={{ y: 0, opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.2 }}
+          className="text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto mb-16"
+        >
+          {t.featDesc}
+        </motion.p>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
           {/* Heatmap */}
-          <div className="md:col-span-2 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl p-8 border border-zinc-100 dark:border-zinc-800 relative overflow-hidden">
+          <motion.div 
+            whileHover={{ y: -5 }}
+            transition={{ duration: 0.2 }}
+            className="md:col-span-2 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl p-8 border border-zinc-100 dark:border-zinc-800 relative overflow-hidden"
+          >
             <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mb-6">
               <Calendar size={24} />
             </div>
             <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-3">{t.feat1Title}</h3>
             <p className="text-zinc-500 dark:text-zinc-400 max-w-sm mb-8">{t.feat1Desc}</p>
             <div className="flex gap-2">
-              <div className="w-16 h-12 rounded-xl bg-indigo-700"></div>
-              <div className="w-16 h-12 rounded-xl bg-indigo-600"></div>
-              <div className="w-16 h-12 rounded-xl bg-indigo-400"></div>
-              <div className="w-16 h-12 rounded-xl bg-indigo-300"></div>
-              <div className="w-16 h-12 rounded-xl bg-indigo-200"></div>
+              <motion.div initial={{ scaleX: 0 }} whileInView={{ scaleX: 1 }} transition={{ delay: 0.5 }} className="w-16 h-12 rounded-xl bg-indigo-700 origin-left"></motion.div>
+              <motion.div initial={{ scaleX: 0 }} whileInView={{ scaleX: 1 }} transition={{ delay: 0.6 }} className="w-16 h-12 rounded-xl bg-indigo-600 origin-left"></motion.div>
+              <motion.div initial={{ scaleX: 0 }} whileInView={{ scaleX: 1 }} transition={{ delay: 0.7 }} className="w-16 h-12 rounded-xl bg-indigo-400 origin-left"></motion.div>
+              <motion.div initial={{ scaleX: 0 }} whileInView={{ scaleX: 1 }} transition={{ delay: 0.8 }} className="w-16 h-12 rounded-xl bg-indigo-300 origin-left"></motion.div>
+              <motion.div initial={{ scaleX: 0 }} whileInView={{ scaleX: 1 }} transition={{ delay: 0.9 }} className="w-16 h-12 rounded-xl bg-indigo-200 origin-left"></motion.div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Link Sekali Klik */}
-          <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-3xl p-8 border border-zinc-200 dark:border-zinc-700">
+          <motion.div 
+            whileHover={{ y: -5 }}
+            transition={{ duration: 0.2 }}
+            className="bg-zinc-100 dark:bg-zinc-800/50 rounded-3xl p-8 border border-zinc-200 dark:border-zinc-700"
+          >
             <div className="w-12 h-12 bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 rounded-2xl flex items-center justify-center mb-6">
               <Share2 size={24} />
             </div>
@@ -517,16 +597,20 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
               <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium truncate">ngumpul.com/event/coffee-jkt</span>
               <div className="text-zinc-400"><Share2 size={14} /></div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Voting Lokasi */}
-          <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl p-8 border border-zinc-100 dark:border-zinc-800">
+          <motion.div 
+            whileHover={{ y: -5 }}
+            transition={{ duration: 0.2 }}
+            className="bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl p-8 border border-zinc-100 dark:border-zinc-800"
+          >
             <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center mb-6">
               <CheckCircle size={24} />
             </div>
             <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-3">{t.feat3Title}</h3>
             <p className="text-zinc-500 dark:text-zinc-400 text-sm">{t.feat3Desc}</p>
-          </div>
+          </motion.div>
 
           {/* Integrasi Kalender */}
           <div className="md:col-span-2 bg-indigo-700 rounded-3xl p-8 text-white relative overflow-hidden">
@@ -551,10 +635,16 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
             <div className="absolute -top-20 -right-10 w-40 h-40 bg-indigo-500 rounded-full blur-2xl opacity-50"></div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Stats Section */}
-      <section className="py-16 px-4 sm:px-6 max-w-5xl mx-auto">
+      <motion.section 
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8 }}
+        className="py-16 px-4 sm:px-6 max-w-5xl mx-auto"
+      >
         <div className="bg-indigo-50/50 dark:bg-indigo-900/10 rounded-3xl p-12 flex flex-wrap justify-between items-center gap-8 text-center border border-indigo-100/50 dark:border-indigo-900/20">
           <div>
             <div className="text-4xl font-black text-indigo-700 dark:text-indigo-400 mb-1">50k+</div>
@@ -573,10 +663,15 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
             <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{t.stat4}</div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* CTA Section */}
-      <section className="py-32 px-4 text-center">
+      <motion.section 
+        initial={{ opacity: 0, scale: 0.9 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true }}
+        className="py-32 px-4 text-center"
+      >
         <h2 className="text-4xl md:text-5xl font-extrabold text-zinc-900 dark:text-white mb-8 tracking-tight">
           {t.ctaTitle1}<br/>{t.ctaTitle2}<span className="text-emerald-600 dark:text-emerald-500">{t.ctaTitle3}</span>
         </h2>
@@ -586,7 +681,7 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
         >
           {t.ctaBtn}
         </button>
-      </section>
+      </motion.section>
     </div>
   );
 };
@@ -984,7 +1079,11 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
 
   if (!isJoined) {
     return (
-      <section className="pt-32 pb-20 px-4 sm:px-6 max-w-md mx-auto">
+      <motion.section 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="pt-32 pb-20 px-4 sm:px-6 max-w-md mx-auto"
+      >
         <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800 p-6 sm:p-8 shadow-xl dark:shadow-none text-center">
           <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-indigo-600 dark:text-indigo-400">
             <Users size={32} />
@@ -1004,34 +1103,53 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
             {t.continueBtn}
           </button>
         </div>
-      </section>
+      </motion.section>
     );
   }
 
   return (
-    <section className="pt-32 pb-20 px-4 sm:px-6 max-w-6xl mx-auto">
+    <motion.section 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="pt-32 pb-20 px-4 sm:px-6 max-w-6xl mx-auto"
+    >
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left: Event Info */}
-        <div className="lg:col-span-1 space-y-6">
+        <motion.div 
+          initial={{ x: -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          className="lg:col-span-1 space-y-6"
+        >
           <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800 p-6 shadow-sm">
             <h1 className="text-2xl font-bold mb-4 dark:text-white">{event.title}</h1>
             {event.description && <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-6">{event.description}</p>}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 text-zinc-600 dark:text-zinc-400 text-sm">
+            <motion.div 
+              variants={{
+                hidden: { opacity: 0 },
+                show: {
+                  opacity: 1,
+                  transition: { staggerChildren: 0.1 }
+                }
+              }}
+              initial="hidden"
+              animate="show"
+              className="space-y-4"
+            >
+              <motion.div variants={{ hidden: { y: 10, opacity: 0 }, show: { y: 0, opacity: 1 } }} className="flex items-center gap-3 text-zinc-600 dark:text-zinc-400 text-sm">
                 <Calendar size={18} className="text-indigo-600 dark:text-indigo-400" />
                 <span>{format(parseISO(event.dates[0]), 'dd MMM')} - {format(parseISO(event.dates[event.dates.length - 1]), 'dd MMM yyyy')}</span>
-              </div>
+              </motion.div>
               {event.location && (
-                <div className="flex items-center gap-3 text-zinc-600 dark:text-zinc-400 text-sm">
+                <motion.div variants={{ hidden: { y: 10, opacity: 0 }, show: { y: 0, opacity: 1 } }} className="flex items-center gap-3 text-zinc-600 dark:text-zinc-400 text-sm">
                   <MapPin size={18} className="text-indigo-600 dark:text-indigo-400" />
                   <span>{event.location}</span>
-                </div>
+                </motion.div>
               )}
-              <div className="flex items-center gap-3 text-zinc-600 dark:text-zinc-400 text-sm">
+              <motion.div variants={{ hidden: { y: 10, opacity: 0 }, show: { y: 0, opacity: 1 } }} className="flex items-center gap-3 text-zinc-600 dark:text-zinc-400 text-sm">
                 <Users size={18} className="text-indigo-600 dark:text-indigo-400" />
                 <span>{event.participants.length} {t.peopleFilled}</span>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
 
             {event.status === 'cancelled' && (
               <div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 p-4 rounded-2xl mb-4">
@@ -1082,32 +1200,40 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
               };
 
               return (
-                <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 p-4 rounded-2xl">
-                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-sm mb-1">
-                    <CheckCircle size={16} />
-                    {t.confirmedSlotLabel}
-                  </div>
-                  <div className="text-zinc-900 dark:text-white font-black mb-3">
-                    {format(parseISO(datePart), 'EEEE, dd MMM')} @ {timePart}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <a
-                      href={`https://calendar.google.com/calendar/render?${gcalParams.toString()}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
-                    >
-                      <span>🗓️</span> {language === 'id' ? 'Tambah ke Google Calendar' : 'Add to Google Calendar'}
-                    </a>
-                    <button
-                      onClick={handleDownloadICS}
-                      className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
-                    >
-                      <span>🍎</span> {language === 'id' ? 'Tambah ke Apple Calendar' : 'Add to Apple Calendar'}
-                    </button>
-                  </div>
-                </div>
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 p-4 rounded-2xl"
+                  >
+                    <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-sm mb-1">
+                      <CheckCircle size={16} />
+                      {t.confirmedSlotLabel}
+                    </div>
+                    <div className="text-zinc-900 dark:text-white font-black mb-3">
+                      {format(parseISO(datePart), 'EEEE, dd MMM')} @ {timePart}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <motion.a
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        href={`https://calendar.google.com/calendar/render?${gcalParams.toString()}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                      >
+                        <span>🗓️</span> {language === 'id' ? 'Tambah ke Google Calendar' : 'Add to Google Calendar'}
+                      </motion.a>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleDownloadICS}
+                        className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                      >
+                        <span>🍎</span> {language === 'id' ? 'Tambah ke Apple Calendar' : 'Add to Apple Calendar'}
+                      </motion.button>
+                    </div>
+                  </motion.div>
               );
             })()}
 
@@ -1206,7 +1332,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
               </button>
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Right: Grid */}
         <div className="lg:col-span-2 space-y-6">
@@ -1357,7 +1483,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
           </motion.div>
         )}
       </AnimatePresence>
-    </section>
+    </motion.section>
   );
 };
 
@@ -1429,13 +1555,15 @@ export const Dashboard = ({
           </div>
           <p className="text-zinc-500 dark:text-zinc-400 mt-1">{t.desc}</p>
         </div>
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={onCreateNew}
           className="w-full sm:w-auto bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 dark:shadow-none"
         >
           <Plus size={18} />
           {t.newBtn}
-        </button>
+        </motion.button>
       </div>
 
       {allEvents.length === 0 ? (
@@ -1445,14 +1573,32 @@ export const Dashboard = ({
           <p className="text-zinc-400 dark:text-zinc-500 text-sm mt-1">{t.emptyDesc}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <motion.div 
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.1
+              }
+            }
+          }}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        >
           {allEvents.map((event) => {
             const isPast = new Date(event.dates[event.dates.length - 1]) < new Date(new Date().setHours(0,0,0,0));
             
             return (
               <motion.div
                 key={event.id}
-                whileHover={{ y: -4 }}
+                variants={{
+                  hidden: { y: 20, opacity: 0 },
+                  show: { y: 0, opacity: 1 }
+                }}
+                whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => onSelectEvent(event)}
                 className={cn(
                   "bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all cursor-pointer group",
@@ -1522,7 +1668,7 @@ export const Dashboard = ({
               </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       )}
 
       <AnimatePresence>
