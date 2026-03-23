@@ -48,6 +48,8 @@ export interface NgumpulEvent {
   participants: Participant[];
   confirmedSlot?: string;
   teamId?: string;
+  status?: 'active' | 'cancelled';
+  role?: 'host' | 'guest';
 }
 
 export interface Toast {

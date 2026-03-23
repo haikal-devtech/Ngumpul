@@ -9,7 +9,10 @@ export default function EventDynamicPage({ params }: { params: Promise<{ slug: s
   const { slug } = resolvedParams;
   const { myEvents, joinedEvents, setMyEvents, setJoinedEvents, currentUser, language } = useAppContext();
 
-  const allEvents = [...myEvents, ...joinedEvents];
+  const allEvents = [
+    ...myEvents.map(e => ({ ...e, role: 'host' as const })),
+    ...joinedEvents.map(e => ({ ...e, role: 'guest' as const }))
+  ];
   const event = allEvents.find((e) => e.id === slug);
 
   if (!event) {

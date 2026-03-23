@@ -768,6 +768,9 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
     confirmSlot: language === 'id' ? 'Konfirmasi Waktu Ini' : 'Confirm This Time',
     confirmed: language === 'id' ? 'Waktu Terkonfirmasi!' : 'Time Confirmed!',
     confirmedSlotLabel: language === 'id' ? 'Waktu Final' : 'Final Time',
+    cancelEvent: language === 'id' ? 'Batalkan Event' : 'Cancel Event',
+    eventCancelled: language === 'id' ? 'Event ini telah dibatalkan' : 'This event has been cancelled',
+    revertCancel: language === 'id' ? 'Aktifkan Kembali' : 'Re-activate Event',
   };
 
   const handleCopyLink = () => {
@@ -972,6 +975,15 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
                 <span>{event.participants.length} {t.peopleFilled}</span>
               </div>
             </div>
+
+            {event.status === 'cancelled' && (
+              <div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 p-4 rounded-2xl mb-4">
+                <div className="flex items-center gap-2 text-red-700 dark:text-red-400 font-bold text-sm">
+                  <X size={16} />
+                  {t.eventCancelled}
+                </div>
+              </div>
+            )}
             
             {event.confirmedSlot && (() => {
               const [datePart, timePart] = event.confirmedSlot!.split(/-(?=\d{2}:\d{2}$)/);
@@ -1104,7 +1116,6 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
               </div>
             </div>
           )}
-
           <div className="bg-indigo-600 dark:bg-indigo-500 rounded-3xl p-6 text-white">
             <h3 className="font-bold mb-2 flex items-center gap-2">
               <Share2 size={18} />
@@ -1121,6 +1132,23 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
               </button>
             </div>
           </div>
+
+          {event.role === 'host' && (
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
+              <button
+                onClick={() => onUpdateEvent({ ...event, status: event.status === 'cancelled' ? 'active' : 'cancelled' })}
+                className={cn(
+                  "w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2",
+                  event.status === 'cancelled' 
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-100 dark:shadow-none" 
+                    : "text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 border border-red-100 dark:border-red-500/20"
+                )}
+              >
+                {event.status === 'cancelled' ? <CheckCircle size={18} /> : <X size={18} />}
+                {event.status === 'cancelled' ? t.revertCancel : t.cancelEvent}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right: Grid */}
@@ -1176,20 +1204,22 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
                       const isSelected = myAvailability.includes(slotId);
                       const heatmapCount = heatmapData[slotId] || 0;
                       const isTopSlot = bestSlots.some(([id]) => id === slotId);
+                      const isDisabled = event.status === 'cancelled';
 
                       return (
                         <div
                           key={j}
-                          onMouseDown={() => onMouseDown(date, time)}
-                          onMouseEnter={() => onMouseEnterSlot(date, time)}
+                          onMouseDown={() => !isDisabled && onMouseDown(date, time)}
+                          onMouseEnter={() => !isDisabled && onMouseEnterSlot(date, time)}
                           onMouseLeave={() => setHoveredSlot(null)}
                           className={cn(
                             "h-10 rounded-lg cursor-pointer transition-all border relative",
-                            viewMode === 'input'
+                            isDisabled && "opacity-50 cursor-not-allowed grayscale",
+                            !isDisabled && (viewMode === 'input'
                               ? isSelected
                                 ? "bg-indigo-600 border-indigo-700 shadow-inner"
                                 : "bg-zinc-50 dark:bg-zinc-800 border-zinc-100 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                              : cn(getHeatmapColor(heatmapCount, event.participants.length), "border-transparent", event.confirmedSlot === slotId && "ring-4 ring-emerald-500 ring-offset-2 dark:ring-offset-zinc-900")
+                              : cn(getHeatmapColor(heatmapCount, event.participants.length), "border-transparent", event.confirmedSlot === slotId && "ring-4 ring-emerald-500 ring-offset-2 dark:ring-offset-zinc-900"))
                           )}
                         >
                           {viewMode === 'input' && isSelected && (
@@ -1319,6 +1349,7 @@ export const Dashboard = ({
     deleteConfirmDesc: language === 'id' ? 'Tindakan ini tidak dapat dibatalkan. Semua data terkait event ini akan hilang.' : 'This action cannot be undone. All data related to this event will be lost.',
     cancelBtn: language === 'id' ? 'Batal' : 'Cancel',
     deleteBtn: language === 'id' ? 'Hapus Permanen' : 'Delete Permanently',
+    cancelledBadge: language === 'id' ? 'Dibatalkan' : 'Cancelled',
   };
 
   return (
@@ -1365,6 +1396,11 @@ export const Dashboard = ({
                   )}>
                     {event.role === 'host' ? t.hostBadge : t.guestBadge}
                   </div>
+                  {event.status === 'cancelled' && (
+                    <div className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400">
+                      {t.cancelledBadge}
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     {event.role === 'host' && (
                       <button 
@@ -2352,8 +2388,8 @@ export default function App() {
 
   const handleUpdateEvent = (updatedEvent: NgumpulEvent) => {
     setMyEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
+    setJoinedEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
     setCurrentEvent(updatedEvent);
-    setView('event');
   };
 
   const handleDeleteEvent = (id: string) => {
