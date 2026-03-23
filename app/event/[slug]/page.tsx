@@ -22,24 +22,34 @@ export default function EventDynamicPage({ params }: { params: Promise<{ slug: s
   const event = localEvent || fetchedEvent;
 
   useEffect(() => {
-    if (!localEvent) {
-      setLoading(true);
-      fetch(`/api/events/${slug}`)
-        .then(res => {
-          if (res.ok) return res.json();
-          throw new Error('Not found');
-        })
-        .then(data => {
-          setFetchedEvent(data);
-          setLoading(false);
-        })
-        .catch(() => {
-          setLoading(false);
-        });
-    } else {
-      setLoading(false);
-    }
-  }, [slug, localEvent]);
+    // 1. Immediately unset loading if localCache is ready (fast UX)
+    if (localEvent) setLoading(false);
+    else setLoading(true);
+
+    // 2. Always fetch fully fresh data from the server in the background
+    fetch(`/api/events/${slug}`)
+      .then(res => {
+        if (res.ok) return res.json();
+        throw new Error('Not found');
+      })
+      .then(data => {
+        setFetchedEvent(data);
+        setLoading(false);
+
+        // Update local context so the rest of the app stays in sync
+        if (myEvents.some(e => e.id === data.id)) {
+          setMyEvents(prev => prev.map(e => e.id === data.id ? data : e));
+        } else {
+          setJoinedEvents(prev => {
+            if (!prev.some(e => e.id === data.id)) return [data, ...prev];
+            return prev.map(e => e.id === data.id ? data : e);
+          });
+        }
+      })
+      .catch((err) => {
+        setLoading(false);
+      });
+  }, [slug]);
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[50vh]">Loading...</div>;
@@ -54,6 +64,7 @@ export default function EventDynamicPage({ params }: { params: Promise<{ slug: s
   }
 
   const handleUpdate = (updatedEvent: any) => {
+    // Optimistic UI Update (LocalStorage)
     if (myEvents.some(e => e.id === updatedEvent.id)) {
       setMyEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
     } else {
@@ -62,6 +73,13 @@ export default function EventDynamicPage({ params }: { params: Promise<{ slug: s
         return prev.map(e => e.id === updatedEvent.id ? updatedEvent : e);
       });
     }
+
+    // Synchronize full event state with the database
+    fetch(`/api/events/${updatedEvent.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedEvent)
+    }).catch(err => console.error("Failed to sync event", err));
   };
 
   return (
