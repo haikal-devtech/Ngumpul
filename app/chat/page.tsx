@@ -44,6 +44,9 @@ export default function ChatPage() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showAttachments, setShowAttachments] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [showJoinRequests, setShowJoinRequests] = useState(false);
+  const [joinRequests, setJoinRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -286,6 +289,54 @@ export default function ChatPage() {
     setContextMenu(null);
   };
 
+  // ── Join Requests ────────────────────────────────────────────────────────
+  const fetchJoinRequests = useCallback(async (roomId: string) => {
+    setLoadingRequests(true);
+    try {
+      const res = await fetch(`/api/chat/rooms/${roomId}/requests`);
+      if (res.ok) {
+        const data = await res.json();
+        setJoinRequests(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch join requests:", err);
+    } finally {
+      setLoadingRequests(false);
+    }
+  }, []);
+
+  const handleJoinRequest = async (requestId: string, action: 'approve' | 'reject') => {
+    if (!selectedRoom) return;
+    try {
+      const res = await fetch(`/api/chat/rooms/${selectedRoom.id}/requests`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId, action }),
+      });
+      if (res.ok) {
+        addToast(
+          action === 'approve' 
+            ? (language === 'id' ? 'Permintaan disetujui' : 'Request approved')
+            : (language === 'id' ? 'Permintaan ditolak' : 'Request rejected'),
+          "success"
+        );
+        fetchJoinRequests(selectedRoom.id);
+        fetchRooms(); // Refresh room list (in case membership count changed)
+      } else {
+        const data = await res.json();
+        addToast(data.error || "Error", "error");
+      }
+    } catch {
+      addToast("Error", "error");
+    }
+  };
+
+  useEffect(() => {
+    if (showJoinRequests && selectedRoom) {
+      fetchJoinRequests(selectedRoom.id);
+    }
+  }, [showJoinRequests, selectedRoom, fetchJoinRequests]);
+
   // ── Load rooms on mount ───────────────────────────────────────────────────
   useEffect(() => {
     fetchRooms();
@@ -305,6 +356,14 @@ export default function ChatPage() {
       });
     }
   }, [messages]);
+
+  useEffect(() => {
+    if (selectedRoom && selectedRoom.createdById === currentUser?.id && selectedRoom.requiresApproval) {
+      fetchJoinRequests(selectedRoom.id);
+    } else {
+      setJoinRequests([]);
+    }
+  }, [selectedRoom, currentUser, fetchJoinRequests]);
 
   // ── Supabase Realtime: per-room broadcast channel ─────────────────────────
   useEffect(() => {
@@ -585,6 +644,22 @@ export default function ChatPage() {
                   <span className="hidden sm:inline">{onlineUsers.length} {t.online}</span>
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 </button>
+
+                {/* Admin-only: Join Requests */}
+                {selectedRoom?.createdById === currentUser?.id && selectedRoom.requiresApproval && (
+                  <button
+                    onClick={() => setShowJoinRequests(true)}
+                    className="relative w-9 h-9 flex items-center justify-center rounded-lg text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                    title={language === 'id' ? 'Permintaan Bergabung' : 'Join Requests'}
+                  >
+                    <Shield size={16} />
+                    {joinRequests.length > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-bold">
+                        {joinRequests.length}
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
 
