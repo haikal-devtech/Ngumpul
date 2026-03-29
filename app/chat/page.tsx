@@ -20,7 +20,7 @@ import { uploadChatMedia } from "@/lib/supabase";
 import { Loader } from "@/components/ui/Loader";
 
 export default function ChatPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const { currentUser, language, addToast } = useAppContext();
 
@@ -137,7 +137,7 @@ export default function ChatPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedRoom]);
+  }, [selectedRoom, session]);
 
   // ── Fetch Polls ───────────────────────────────────────────────────────────
   const fetchPolls = useCallback(async (roomId: string) => {
@@ -549,8 +549,10 @@ export default function ChatPage() {
 
   // ── Load rooms on mount ───────────────────────────────────────────────────
   useEffect(() => {
-    fetchRooms();
-  }, [fetchRooms]);
+    if (status !== 'loading') {
+      fetchRooms();
+    }
+  }, [fetchRooms, status]);
 
   // ── Load messages when room changes ───────────────────────────────────────
   useEffect(() => {
@@ -852,12 +854,30 @@ export default function ChatPage() {
             </div>
 
             {/* Connection indicator */}
-            <div className={cn(
-              "flex items-center gap-1.5 px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest",
-              isConnected ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-400"
-            )}>
-              {isConnected ? <Wifi size={10} /> : <WifiOff size={10} />}
-              {isConnected ? t.connected : t.disconnected}
+            <div className="px-4 py-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 opacity-60">
+              {status === 'loading' ? (
+                <>
+                  <Loader2 size={10} className="animate-spin" />
+                  CONNECTING...
+                </>
+              ) : selectedRoom ? (
+                isConnected ? (
+                  <>
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
+                    ONLINE
+                  </>
+                ) : (
+                  <>
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                    TERPUTUS
+                  </>
+                )
+              ) : (
+                <>
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  READY
+                </>
+              )}
             </div>
 
             {/* Room List */}
