@@ -938,6 +938,16 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
 
   const [myAvailability, setMyAvailability] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'input' | 'heatmap'>('input');
+
+  // Load existing availability when the page mounts so edits don't wipe saved data
+  React.useEffect(() => {
+    if (currentUser) {
+      const existing = event.participants.find(p => p.id === currentUser.id);
+      if (existing && existing.availability.length > 0) {
+        setMyAvailability(existing.availability);
+      }
+    }
+  }, [currentUser?.id]); // Only run on mount / user change, NOT on event.participants to avoid loops
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [isCopied, setIsCopied] = useState(false);

@@ -51,6 +51,9 @@ export default function ChatPage() {
   const [showJoinRequests, setShowJoinRequests] = useState(false);
   const [joinRequests, setJoinRequests] = useState<any[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
+  const [showBlockedUsers, setShowBlockedUsers] = useState(false);
+  const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
+  const [loadingBlocked, setLoadingBlocked] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -86,6 +89,10 @@ export default function ChatPage() {
     inviteLink: language === "id" ? "Undang" : "Invite",
     inviteCopied: language === "id" ? "Tautan Disalin!" : "Link Copied!",
     inviteError: language === "id" ? "Gagal membuat tautan" : "Failed to generate link",
+    blockedUsersTitle: language === "id" ? "Pengguna Diblokir" : "Blocked Users",
+    unblock: language === "id" ? "Buka Blokir" : "Unblock",
+    noBlockedUsers: language === "id" ? "Tidak ada pengguna yang diblokir" : "No blocked users",
+    unblockSuccess: language === "id" ? "Pengguna berhasil dibuka blokirnya" : "User unblocked successfully",
   };
 
   // ── Fetch rooms ───────────────────────────────────────────────────────────
@@ -263,7 +270,7 @@ export default function ChatPage() {
       const res = await fetch("/api/chat/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newRoomName.trim(), description: newRoomDesc.trim() || null }),
+        body: JSON.stringify({ name: newRoomName.trim(), description: newRoomDesc.trim() || null, isPrivate: true, requiresApproval: true }),
       });
       if (res.ok) {
         const room = await res.json();
@@ -340,6 +347,47 @@ export default function ChatPage() {
     }
     setContextMenu(null);
   };
+
+  // ── Blocked Users ────────────────────────────────────────────────────────
+  const fetchBlockedUsers = useCallback(async () => {
+    setLoadingBlocked(true);
+    try {
+      const res = await fetch("/api/chat/moderation/blocked");
+      if (res.ok) {
+        const data = await res.json();
+        setBlockedUsers(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch blocked users:", err);
+    } finally {
+      setLoadingBlocked(false);
+    }
+  }, []);
+
+  const unblockUser = async (userId: string) => {
+    try {
+      const res = await fetch("/api/chat/moderation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "unblock", targetUserId: userId }),
+      });
+      if (res.ok) {
+        addToast(t.unblockSuccess, "success");
+        setBlockedUsers((prev) => prev.filter((u) => u.id !== userId));
+        // Re-fetch messages to show unblocked user's messages
+        if (selectedRoom) fetchMessages(selectedRoom.id);
+      } else {
+        const data = await res.json();
+        addToast(data.error || "Error", "error");
+      }
+    } catch {
+      addToast("Error", "error");
+    }
+  };
+
+  useEffect(() => {
+    if (showBlockedUsers) fetchBlockedUsers();
+  }, [showBlockedUsers, fetchBlockedUsers]);
 
   // ── Join Requests ────────────────────────────────────────────────────────
   const fetchJoinRequests = useCallback(async (roomId: string) => {
@@ -700,6 +748,17 @@ export default function ChatPage() {
                   <span className="hidden sm:inline">{onlineUsers.length} {t.online}</span>
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 </button>
+
+                {/* Blocked Users */}
+                {session && currentUser && (
+                  <button
+                    onClick={() => setShowBlockedUsers(true)}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    title={t.blockedUsersTitle}
+                  >
+                    <Ban size={16} />
+                  </button>
+                )}
 
                 {/* Admin-only: Join Requests */}
                 {selectedRoom?.createdById === currentUser?.id && selectedRoom.requiresApproval && (
@@ -1102,6 +1161,73 @@ export default function ChatPage() {
               {t.block}
             </button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Blocked Users Modal ────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showBlockedUsers && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowBlockedUsers(false)}
+              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            >
+              <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 w-full max-w-md p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="font-bold text-lg text-zinc-900 dark:text-white flex items-center gap-2">
+                    <Ban size={18} className="text-red-500" />
+                    {t.blockedUsersTitle}
+                  </h3>
+                  <button
+                    onClick={() => setShowBlockedUsers(false)}
+                    className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                {loadingBlocked ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 size={20} className="animate-spin text-indigo-400" />
+                  </div>
+                ) : blockedUsers.length === 0 ? (
+                  <p className="text-center text-sm text-zinc-500 dark:text-zinc-400 py-8">{t.noBlockedUsers}</p>
+                ) : (
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {blockedUsers.map((user) => (
+                      <div
+                        key={user.id}
+                        className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800"
+                      >
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
+                            alt={user.name || "User"}
+                            className="w-9 h-9 rounded-full object-cover"
+                          />
+                          <span className="font-medium text-sm text-zinc-900 dark:text-white">{user.name || "User"}</span>
+                        </div>
+                        <button
+                          onClick={() => unblockUser(user.id)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                        >
+                          {t.unblock}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
