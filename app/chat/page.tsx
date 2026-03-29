@@ -298,7 +298,12 @@ export default function ChatPage() {
 
   // ── Auto-scroll to bottom ─────────────────────────────────────────────────
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
+    }
   }, [messages]);
 
   // ── Supabase Realtime: per-room broadcast channel ─────────────────────────
