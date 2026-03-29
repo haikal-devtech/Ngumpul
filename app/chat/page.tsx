@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useAppContext } from "@/components/AppContext";
@@ -19,6 +19,388 @@ import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import { uploadChatMedia } from "@/lib/supabase";
 import { Loader } from "@/components/ui/Loader";
 import confetti from 'canvas-confetti';
+
+// ── Memoized Message List ──────────────────────────────────────────────────
+const ChatMessageList = React.memo(({ 
+  groupedMessages, 
+  currentUser, 
+  polls, 
+  t, 
+  language,
+  onFinalizePoll,
+  onVote,
+  onReport,
+  onBlock,
+  onDelete,
+  onEdit,
+  onLightbox,
+  setContextMenu,
+  formatTime
+}: any) => {
+  return (
+    <>
+      {groupedMessages.map((group: any) => (
+        <div key={group.date}>
+          <div className="flex items-center gap-3 my-4">
+            <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+            <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+              {group.date}
+            </span>
+            <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+          </div>
+          {group.msgs.map((msg: any, i: number) => {
+            const isOwn = currentUser?.id === msg.senderId;
+            const showAvatar = i === 0 || group.msgs[i - 1]?.senderId !== msg.senderId;
+            return (
+              <motion.div
+                key={msg.id}
+                id={`msg-${msg.id}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.15 }}
+                className={cn(
+                  "flex gap-2.5 group",
+                  showAvatar ? "mt-1.5" : "mt-0.5",
+                  isOwn ? "flex-row-reverse" : ""
+                )}
+              >
+                <div className="w-8 shrink-0">
+                  {showAvatar && (
+                    <img
+                      src={msg.sender.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.sender.name}`}
+                      alt={msg.sender.name || "User"}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                  )}
+                </div>
+                <div className={cn("max-w-[70%] min-w-0", isOwn ? "items-end" : "items-start")}>
+                  {showAvatar && (
+                    <div className={cn("flex items-center gap-2", isOwn ? "flex-row-reverse" : "")}>
+                      <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                        {msg.sender.name || "User"}
+                      </span>
+                      <span className="text-[10px] text-zinc-400">
+                        {formatTime(msg.createdAt)}
+                        {msg.updatedAt && msg.updatedAt !== msg.createdAt && !msg.isDeleted && (
+                          <span className="ml-1 italic opacity-70">({language === 'id' ? 'diedit' : 'edited'})</span>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                  <div className="relative">
+                    {msg.type === "image" && msg.mediaUrl ? (
+                      <div className={cn(
+                        "rounded-2xl overflow-hidden p-1 shadow-sm",
+                        isOwn ? "bg-indigo-600 rounded-tr-md" : "bg-zinc-100 dark:bg-zinc-800 rounded-tl-md"
+                      )}>
+                        <img 
+                          src={msg.mediaUrl} 
+                          alt="Chat Attachment" 
+                          className="max-w-full sm:max-w-xs h-auto max-h-64 object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
+                          loading="lazy"
+                          onClick={() => onLightbox(msg.mediaUrl!)}
+                        />
+                        {msg.content !== "Image" && (
+                          <p className={cn("px-2 py-1.5 text-sm", isOwn ? "text-white" : "text-zinc-900 dark:text-zinc-100")}>
+                            {msg.content}
+                          </p>
+                        )}
+                      </div>
+                    ) : msg.type === "emote" ? (
+                      <div className="text-4xl px-2 py-1">
+                        {msg.content}
+                      </div>
+                    ) : msg.type === "location" ? (
+                      <div className={cn("p-1 rounded-2xl", isOwn ? "bg-indigo-600 rounded-tr-md" : "bg-zinc-100 dark:bg-zinc-800 rounded-tl-md")}>
+                        <a href={`https://www.google.com/maps?q=${JSON.parse(msg.content).lat},${JSON.parse(msg.content).lng}`} target="_blank" rel="noreferrer">
+                          <div className={cn("w-48 sm:w-56 h-36 rounded-xl flex flex-col items-center justify-center transition", isOwn ? "bg-indigo-700 hover:bg-indigo-800 text-indigo-200" : "bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-500 dark:text-zinc-400")}>
+                            <MapPin size={28} className={cn("mb-2", isOwn ? "text-white" : "text-red-500")} />
+                            <span className={cn("text-xs font-bold text-center px-2", isOwn ? "text-white" : "text-zinc-700 dark:text-zinc-300")}>{JSON.parse(msg.content).label}</span>
+                          </div>
+                        </a>
+                      </div>
+                    ) : msg.type === "poll" ? (
+                      (() => {
+                        const pollId = msg.mediaUrl || msg.content;
+                        const poll = polls.find((p: any) => p.id === pollId);
+                        if (!poll) return <div className="text-sm italic text-zinc-500 px-3 py-2">Poll not found ({pollId?.substring(0,8)})</div>;
+                        return (
+                          <div className={cn("p-4 rounded-2xl w-64 shadow-sm border border-black/5 dark:border-white/5", isOwn ? "bg-indigo-600 text-white rounded-tr-md" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-tl-md")}>
+                            <div className="flex items-center gap-2 mb-3">
+                              <BarChart2 size={18} className="shrink-0" />
+                              <span className="font-bold text-sm leading-tight text-balance">{poll.question}</span>
+                            </div>
+                            <div className="space-y-2">
+                              {poll.options.map((opt: any, idx: number) => {
+                                const votesCount = opt.votes?.length || 0;
+                                const totalVotes = poll.options.reduce((acc: number, o: any) => acc + (o.votes?.length || 0), 0);
+                                const percent = totalVotes > 0 ? Math.round((votesCount / totalVotes) * 100) : 0;
+                                const hasVoted = opt.votes?.some((v: any) => v.userId === currentUser?.id);
+                                const isFinished = poll.isFinalized;
+
+                                return (
+                                  <button
+                                    key={idx}
+                                    disabled={isFinished}
+                                    onClick={() => onVote(poll.id, idx)}
+                                    className={cn(
+                                      "w-full text-left relative overflow-hidden rounded-xl border transition-all active:scale-[0.98]",
+                                      isOwn 
+                                        ? (hasVoted ? "bg-white/20 border-white/30" : "bg-white/5 border-white/10 hover:bg-white/10")
+                                        : (hasVoted ? "bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800" : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 hover:border-indigo-300 dark:hover:border-indigo-700")
+                                    )}
+                                  >
+                                    <div 
+                                      className={cn("absolute inset-0 transition-all duration-500", isOwn ? "bg-white/20" : "bg-indigo-500/10")} 
+                                      style={{ width: `${percent}%` }} 
+                                    />
+                                    <div className="relative px-3 py-2.5 flex items-center justify-between gap-2">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center shrink-0", isOwn ? "border-white/40" : "border-zinc-300 dark:border-zinc-600")}>
+                                          {hasVoted && <div className={cn("w-2 h-2 rounded-full", isOwn ? "bg-white" : "bg-indigo-500")} />}
+                                        </div>
+                                        <span className={cn("text-xs font-medium truncate", isOwn ? "text-white" : "text-zinc-700 dark:text-zinc-200")}>{opt.text}</span>
+                                      </div>
+                                      <span className={cn("text-[10px] font-bold shrink-0", isOwn ? "text-white/80" : "text-zinc-400")}>{percent}%</span>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <div className="mt-3 pt-3 border-t border-black/5 dark:border-white/10 flex items-center justify-between gap-2">
+                              <div className="text-[10px] font-medium opacity-70">
+                                {poll.isFinalized ? (
+                                  <span className="text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                                    <Check size={10} />
+                                    {poll.options.every((o: any) => o.votes?.length > 0) ? (language === 'id' ? 'SEMUA MEMBER SETUJU' : 'ALL MEMBERS AGREED') : (language === 'id' ? 'SELESAI' : 'FINISHED')}
+                                  </span>
+                                ) : (
+                                  `${poll.options.reduce((acc: number, o: any) => acc + (o.votes?.length || 0), 0)} votes`
+                                )}
+                              </div>
+                              {isOwn && !poll.isFinalized && (
+                                <button 
+                                  onClick={() => onFinalizePoll(poll.id)}
+                                  className="px-2 py-1 rounded-md bg-white/20 hover:bg-white/30 text-[10px] font-bold transition-colors"
+                                >
+                                  {language === 'id' ? 'Finalisasi' : 'Finalize'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <div
+                        className={cn(
+                          "px-4 py-2.5 rounded-2xl text-sm break-words whitespace-pre-wrap leading-relaxed shadow-sm",
+                          isOwn
+                            ? "bg-indigo-600 text-white rounded-tr-md"
+                            : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-tl-md"
+                        )}
+                      >
+                        {msg.content}
+                      </div>
+                    )}
+                    {isOwn && (
+                      <div className="absolute -right-5 bottom-1 flex gap-0.5 opacity-50">
+                        <Check size={10} className="text-indigo-400" />
+                        <Check size={10} className="text-indigo-400 -ml-2" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className={cn("opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1", isOwn ? "flex-row-reverse" : "")}>
+                   <button 
+                    onClick={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setContextMenu({ 
+                        x: rect.left, 
+                        y: rect.top, 
+                        messageId: msg.id, 
+                        senderId: msg.senderId 
+                      });
+                    }}
+                    className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-400"
+                   >
+                      <MoreVertical size={14} />
+                   </button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      ))}
+    </>
+  );
+});
+
+// ── Memoized Message Input Area ───────────────────────────────────────────
+const ChatInputArea = React.memo(({
+  onSend,
+  onFileUpload,
+  onEmote,
+  inputRef,
+  fileInputRef,
+  t,
+  language,
+  uploadingMedia,
+  showAttachments,
+  setShowAttachments,
+  showEmojiPicker,
+  setShowEmojiPicker,
+  onLocation,
+  onPoll,
+  handleKeyDown
+}: any) => {
+  const [text, setText] = useState("");
+
+  const handleSend = () => {
+    if (!text.trim()) return;
+    onSend('text', text);
+    setText("");
+  };
+
+  const handleEmojiInsert = (emojiData: EmojiClickData) => {
+    setText(prev => prev + emojiData.emoji);
+  };
+
+  return (
+    <div className="p-4 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 relative shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+      <div className="flex items-center gap-1">
+        <AnimatePresence>
+          {showEmojiPicker && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="absolute bottom-full right-4 z-40 mb-2"
+            >
+              <EmojiPicker
+                theme={Theme.AUTO}
+                onEmojiClick={handleEmojiInsert}
+                width={320}
+                height={400}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Attachment menu */}
+        <div className="relative">
+          <button
+            onClick={() => setShowAttachments(!showAttachments)}
+            className={cn(
+              "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+              showAttachments
+                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+            )}
+          >
+            <Plus className={cn("transition-transform duration-200", showAttachments ? "rotate-45" : "")} size={20} />
+          </button>
+
+          <AnimatePresence>
+            {showAttachments && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                className="absolute bottom-full left-0 mb-4 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-100 dark:border-zinc-800 p-2 min-w-[200px] z-50 overflow-hidden"
+              >
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 text-zinc-600 dark:text-zinc-300 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                    <ImageIcon size={18} />
+                  </div>
+                  <span className="text-sm font-bold">{t.attachPhoto}</span>
+                </button>
+                <button
+                  onClick={onLocation}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 text-zinc-600 dark:text-zinc-300 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+                    <MapPin size={18} />
+                  </div>
+                  <span className="text-sm font-bold">{t.attachLocation}</span>
+                </button>
+                <button
+                  onClick={onPoll}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 text-zinc-600 dark:text-zinc-300 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                    <BarChart2 size={18} />
+                  </div>
+                  <span className="text-sm font-bold">{t.createPoll}</span>
+                </button>
+                <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1 mx-2" />
+                <div className="p-2 grid grid-cols-4 gap-1">
+                  {['🔥', '❤️', '👍', '😂', '😮', '😢', '👏', '🎉'].map(emote => (
+                    <button
+                      key={emote}
+                      onClick={() => onEmote(emote)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-lg transition-transform active:scale-125"
+                    >
+                      {emote}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={onFileUpload}
+          className="hidden"
+          accept="image/*"
+        />
+
+        <div className="flex-1 flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900 rounded-2xl px-4 py-1 border border-transparent focus-within:border-indigo-500/30 focus-within:bg-white dark:focus-within:bg-black transition-all">
+          <textarea
+            ref={inputRef}
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder={t.placeholder}
+            className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 resize-none max-h-32 min-h-[40px] text-zinc-900 dark:text-white"
+            rows={1}
+          />
+          <button
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            className="text-zinc-400 hover:text-indigo-500 transition-colors"
+          >
+            <Smile size={20} />
+          </button>
+        </div>
+
+        <button
+          onClick={handleSend}
+          disabled={!text.trim() || uploadingMedia}
+          className={cn(
+            "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+            text.trim()
+              ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 active:scale-95"
+              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400"
+          )}
+        >
+          <Send size={18} className={text.trim() ? "translate-x-0.5 -translate-y-0.5" : ""} />
+        </button>
+      </div>
+    </div>
+  );
+});
 
 export default function ChatPage() {
   const { data: session, status } = useSession();
@@ -290,7 +672,7 @@ export default function ChatPage() {
 
 
   // ── Send message ──────────────────────────────────────────────────────────
-  const sendMessage = async (overrideType?: 'text'|'image'|'sticker'|'emote'|'poll'|'location', overrideContent?: string, mediaUrl?: string) => {
+  const sendMessage = useCallback(async (overrideType?: 'text'|'image'|'sticker'|'emote'|'poll'|'location', overrideContent?: string, mediaUrl?: string) => {
     if (!session || !currentUser) {
       setShowLoginGate(true);
       return;
@@ -319,7 +701,7 @@ export default function ChatPage() {
         setMessages((prev) => [...prev, msg]);
         setNewMessage("");
         inputRef.current?.focus();
-        setTimeout(scrollToBottom, 50); // Ensure scroll happens after DOM update
+        setTimeout(() => scrollToBottom(), 50); // Ensure scroll happens after DOM update
         
         // Broadcast via Supabase Realtime channel
         supabase.channel(`room:${selectedRoom.id}`).send({
@@ -333,7 +715,7 @@ export default function ChatPage() {
     } finally {
       setSendingMessage(false);
     }
-  };
+  }, [session, currentUser, selectedRoom, sendingMessage, newMessage]);
 
   // ── Image Compression ─────────────────────────────────────────────────────
   const compressImage = (file: File): Promise<File | Blob> => {
@@ -407,9 +789,7 @@ export default function ChatPage() {
     }
   };
 
-  const handleEmojiClick = (emojiData: EmojiClickData) => {
-    setNewMessage((prev) => prev + emojiData.emoji);
-  };
+
 
   const sendEmote = (emoteName: string) => {
     sendMessage('emote', emoteName);
@@ -830,9 +1210,10 @@ export default function ChatPage() {
         const poll = await res.json();
         setPolls(prev => [poll, ...prev]);
         setShowPollModal(false);
+        const question = pollQuestion.trim();
         setPollQuestion("");
         setPollOptions(["", ""]);
-        await sendMessage('poll', poll.id);
+        await sendMessage('poll', question, poll.id);
       }
     } catch {
       addToast('Error creating poll', 'error');
@@ -917,12 +1298,7 @@ export default function ChatPage() {
   }, []);
 
   // ── Keyboard shortcut: Enter to send ──────────────────────────────────────
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
+
 
   // ── Format timestamp ──────────────────────────────────────────────────────
   const formatTime = (dateStr: string) => {
@@ -942,16 +1318,19 @@ export default function ChatPage() {
   };
 
   // ── Group messages by date ────────────────────────────────────────────────
-  const groupedMessages: { date: string; msgs: ChatMessage[] }[] = [];
-  messages.forEach((msg) => {
-    const date = formatDate(msg.createdAt);
-    const last = groupedMessages[groupedMessages.length - 1];
-    if (last && last.date === date) {
-      last.msgs.push(msg);
-    } else {
-      groupedMessages.push({ date, msgs: [msg] });
-    }
-  });
+  const groupedMessages = useMemo(() => {
+    const groups: { date: string; msgs: ChatMessage[] }[] = [];
+    messages.forEach((msg) => {
+      const date = formatDate(msg.createdAt);
+      const last = groups[groups.length - 1];
+      if (last && last.date === date) {
+        last.msgs.push(msg);
+      } else {
+        groups.push({ date, msgs: [msg] });
+      }
+    });
+    return groups;
+  }, [messages]);
 
   const handleRoomSelect = (room: ChatRoom) => {
     setSelectedRoom(room);
@@ -1313,161 +1692,22 @@ export default function ChatPage() {
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">{t.noMessages}</p>
                   </div>
                 ) : (
-                  groupedMessages.map((group) => (
-                    <div key={group.date}>
-                      {/* Date separator */}
-                      <div className="flex items-center gap-3 my-4">
-                        <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
-                        <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
-                          {group.date}
-                        </span>
-                        <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
-                      </div>
-                      {group.msgs.map((msg, i) => {
-                        const isOwn = currentUser?.id === msg.senderId;
-                        const showAvatar = i === 0 || group.msgs[i - 1]?.senderId !== msg.senderId;
-                        return (
-                          <motion.div
-                            key={msg.id}
-                            id={`msg-${msg.id}`}
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.15 }}
-                            className={cn(
-                              "flex gap-2.5 group",
-                              showAvatar ? "mt-1.5" : "mt-0.5",
-                              isOwn ? "flex-row-reverse" : ""
-                            )}
-                          >
-                            {/* Avatar */}
-                            <div className="w-8 shrink-0">
-                              {showAvatar && (
-                                <img
-                                  src={msg.sender.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.sender.name}`}
-                                  alt={msg.sender.name || "User"}
-                                  className="w-8 h-8 rounded-full object-cover"
-                                />
-                              )}
-                            </div>
-                            {/* Message bubble */}
-                            <div className={cn("max-w-[70%] min-w-0", isOwn ? "items-end" : "items-start")}>
-                              {showAvatar && (
-                                <div className={cn("flex items-center gap-2", isOwn ? "flex-row-reverse" : "")}>
-                                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                                    {msg.sender.name || "User"}
-                                  </span>
-                                  <span className="text-[10px] text-zinc-400">
-                                    {formatTime(msg.createdAt)}
-                                    {msg.updatedAt && msg.updatedAt !== msg.createdAt && !msg.isDeleted && (
-                                      <span className="ml-1 italic opacity-70">({language === 'id' ? 'diedit' : 'edited'})</span>
-                                    )}
-                                  </span>
-                                </div>
-                              )}
-                              <div className="relative">
-                                {msg.type === "image" && msg.mediaUrl ? (
-                                  <div className={cn(
-                                    "rounded-2xl overflow-hidden p-1 shadow-sm",
-                                    isOwn ? "bg-indigo-600 rounded-tr-md" : "bg-zinc-100 dark:bg-zinc-800 rounded-tl-md"
-                                  )}>
-                                    <img 
-                                      src={msg.mediaUrl} 
-                                      alt="Chat Attachment" 
-                                      className="max-w-full sm:max-w-xs h-auto max-h-64 object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
-                                      loading="lazy"
-                                      onClick={() => setLightboxImage(msg.mediaUrl!)}
-                                    />
-                                    {msg.content !== "Image" && (
-                                      <p className={cn("px-2 py-1.5 text-sm", isOwn ? "text-white" : "text-zinc-900 dark:text-锌-100")}>
-                                        {msg.content}
-                                      </p>
-                                    )}
-                                  </div>
-                                ) : msg.type === "emote" ? (
-                                  <div className="text-4xl px-2 py-1">
-                                    {msg.content}
-                                  </div>
-                                ) : msg.type === "location" ? (
-                                  <div className={cn("p-1 rounded-2xl", isOwn ? "bg-indigo-600 rounded-tr-md" : "bg-zinc-100 dark:bg-zinc-800 rounded-tl-md")}>
-                                    <a href={`https://www.google.com/maps?q=${JSON.parse(msg.content).lat},${JSON.parse(msg.content).lng}`} target="_blank" rel="noreferrer">
-                                      <div className={cn("w-48 sm:w-56 h-36 rounded-xl flex flex-col items-center justify-center transition", isOwn ? "bg-indigo-700 hover:bg-indigo-800 text-indigo-200" : "bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-500 dark:text-zinc-400")}>
-                                        <MapPin size={28} className={cn("mb-2", isOwn ? "text-white" : "text-red-500")} />
-                                        <span className={cn("text-xs font-bold text-center px-2", isOwn ? "text-white" : "text-zinc-700 dark:text-zinc-300")}>{JSON.parse(msg.content).label}</span>
-                                      </div>
-                                    </a>
-                                  </div>
-                                ) : msg.type === "poll" ? (
-                                  (() => {
-                                    const poll = polls.find(p => p.id === msg.mediaUrl);
-                                    if (!poll) return <div className="text-sm italic text-zinc-500 px-3 py-2">Poll not found</div>;
-                                    return (
-                                      <div className={cn("p-4 rounded-2xl w-64", isOwn ? "bg-indigo-600 text-white rounded-tr-md" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-tl-md")}>
-                                        <div className="flex items-center gap-2 mb-3">
-                                          <BarChart2 size={18} className="shrink-0" />
-                                          <span className="font-bold text-sm leading-tight text-balance">{poll.question}</span>
-                                        </div>
-                                        <div className="space-y-2">
-                                          {poll.options.map((opt: string, optIndex: number) => {
-                                             const voteCount = poll.votes.filter((v: any) => v.optionIndex === optIndex).length;
-                                             const totalVotes = poll.votes.length || 1;
-                                             const percent = Math.round((voteCount / totalVotes) * 100);
-                                             const hasVoted = poll.votes.some((v: any) => v.userId === currentUser?.id && v.optionIndex === optIndex);
-                                             return (
-                                               <button 
-                                                 key={optIndex} 
-                                                 onClick={() => handleVote(poll.id, optIndex)}
-                                                 className={cn("w-full relative overflow-hidden rounded-lg p-2 text-left text-xs transition border flex justify-between items-center group/btn",
-                                                   hasVoted 
-                                                     ? (isOwn ? "border-white/40 bg-white/20" : "border-indigo-400 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold")
-                                                     : (isOwn ? "border-white/20 hover:bg-white/10" : "border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700")
-                                                 )}>
-                                                 <div className="absolute inset-y-0 left-0 bg-current opacity-10 transition-all duration-500" style={{ width: `${percent}%` }} />
-                                                 <span className="relative z-10 break-words pr-2">{opt}</span>
-                                                 <span className="relative z-10 font-bold opacity-80 group-hover/btn:opacity-100 shrink-0">{voteCount}</span>
-                                               </button>
-                                             );
-                                          })}
-                                        </div>
-                                        <div className="text-[10px] opacity-70 mt-2.5 text-right">{poll.votes.length} {t.vote}s</div>
-                                      </div>
-                                    );
-                                  })()
-                                ) : (
-                                  <div
-                                    className={cn(
-                                      "px-3.5 py-2 rounded-2xl text-sm leading-relaxed break-words",
-                                      isOwn
-                                        ? "bg-indigo-600 text-white rounded-tr-md"
-                                        : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-tl-md"
-                                    )}
-                                  >
-                                    {msg.content}
-                                  </div>
-                                )}
-                                {/* Context menu trigger */}
-                                {session && !isOwn && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setContextMenu({ x: e.clientX, y: e.clientY, message: msg });
-                                    }}
-                                    className="absolute top-1 -right-7 w-5 h-5 rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                                  >
-                                    <MoreVertical size={12} />
-                                  </button>
-                                )}
-                              </div>
-                              {!showAvatar && (
-                                <span className="text-[10px] text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
-                                  {formatTime(msg.createdAt)}
-                                </span>
-                              )}
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  ))
+                  <ChatMessageList 
+                    groupedMessages={groupedMessages} 
+                    currentUser={currentUser} 
+                    polls={polls} 
+                    t={t} 
+                    language={language}
+                    onFinalizePoll={handleFinalizePoll}
+                    onVote={handleVote}
+                    onReport={reportMessage}
+                    onBlock={blockUser}
+                    onDelete={handleDeleteMessage}
+                    onEdit={(msg: any) => { setEditingMessage(msg); setEditContent(msg.content); }}
+                    onLightbox={(url: string) => setLightboxImage(url)}
+                    setContextMenu={setContextMenu}
+                    formatTime={formatTime}
+                  />
                 )}
                 <div ref={messagesEndRef} />
               </div>
@@ -1518,140 +1758,24 @@ export default function ChatPage() {
             </div>
 
             {/* Message Input / Guest Banner */}
+            {/* Message Input / Guest Banner */}
             {session && currentUser ? (
-              <div className="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-3 sm:p-4 relative">
-                <input
-                  type="file"
-                  accept="image/png, image/jpeg, image/webp, image/gif"
-                  className="hidden"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                />
-                
-                {/* Emoji / Attachments popover */}
-                <AnimatePresence>
-                  {showEmojiPicker && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute bottom-full mb-4 md:mb-6 left-4 z-50 shadow-2xl rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800"
-                    >
-                      <EmojiPicker
-                        onEmojiClick={handleEmojiClick}
-                        theme={Theme.AUTO}
-                        lazyLoadEmojis={true}
-                        searchDisabled={false}
-                        skinTonesDisabled={true}
-                        height={350}
-                        width={300}
-                      />
-                    </motion.div>
-                  )}
-                  {showAttachments && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute bottom-full mb-4 left-4 z-40 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl w-48 p-2 flex flex-col gap-1"
-                    >
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm font-semibold text-zinc-700 dark:text-zinc-300 transition-colors"
-                      >
-                        <ImageIcon size={16} className="text-blue-500" />
-                        {language === 'id' ? 'Gambar' : 'Image'}
-                      </button>
-                      <button
-                        onClick={handleSendLocation}
-                        disabled={sendingLocation}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm font-semibold text-zinc-700 dark:text-zinc-300 transition-colors"
-                      >
-                        {sendingLocation ? <Loader2 size={16} className="text-red-500 animate-spin" /> : <MapPin size={16} className="text-red-500" />}
-                        {t.sendLocation}
-                      </button>
-                      <button
-                        onClick={() => { setShowPollModal(true); setShowAttachments(false); }}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm font-semibold text-zinc-700 dark:text-zinc-300 transition-colors"
-                      >
-                        <BarChart2 size={16} className="text-indigo-500" />
-                        {t.createPoll}
-                      </button>
-                      
-                      <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
-                      <div className="px-3 py-1.5 text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                        {language === 'id' ? 'Kirim Emote' : 'Send Emote'}
-                      </div>
-                      <div className="flex gap-2 p-2">
-                        {['👍', '❤️', '🔥', '🎉'].map(emote => (
-                          <button
-                            key={emote}
-                            onClick={() => sendEmote(emote)}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xl transition-transform hover:scale-125 focus:outline-none"
-                          >
-                            {emote}
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 rounded-2xl px-2 py-2 border border-zinc-200 dark:border-zinc-800 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-900/30 transition-all">
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={() => {
-                        setShowAttachments(!showAttachments);
-                        setShowEmojiPicker(false);
-                      }}
-                      className={cn(
-                        "w-9 h-9 rounded-xl flex items-center justify-center transition-colors focus:outline-none",
-                        showAttachments ? "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40" : "text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800"
-                      )}
-                    >
-                      <Plus size={20} />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowEmojiPicker(!showEmojiPicker);
-                        setShowAttachments(false);
-                      }}
-                      className={cn(
-                        "w-9 h-9 rounded-xl flex items-center justify-center transition-colors focus:outline-none hidden sm:flex",
-                        showEmojiPicker ? "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-white" : "text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800"
-                      )}
-                    >
-                      <Smile size={18} />
-                    </button>
-                  </div>
-                  
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={uploadingMedia ? (language==='id'?'Mengunggah...':'Uploading...') : t.typeMessage}
-                    className="flex-1 bg-transparent border-none outline-none text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 px-2 min-w-0"
-                    disabled={sendingMessage || uploadingMedia}
-                  />
-                  
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => sendMessage('text')}
-                    disabled={!newMessage.trim() || sendingMessage || uploadingMedia}
-                    className={cn(
-                      "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-colors shrink-0 focus:outline-none",
-                      newMessage.trim()
-                        ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/20"
-                        : "bg-zinc-200 dark:bg-zinc-800 text-zinc-400"
-                    )}
-                  >
-                    {uploadingMedia ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} className="ml-0.5" />}
-                  </motion.button>
-                </div>
-              </div>
+              <ChatInputArea 
+                onSend={sendMessage} 
+                onFileUpload={handleFileUpload}
+                onEmote={sendEmote}
+                inputRef={inputRef}
+                fileInputRef={fileInputRef}
+                t={t}
+                language={language}
+                uploadingMedia={uploadingMedia}
+                showAttachments={showAttachments}
+                setShowAttachments={setShowAttachments}
+                showEmojiPicker={showEmojiPicker}
+                setShowEmojiPicker={setShowEmojiPicker}
+                onLocation={handleSendLocation}
+                onPoll={() => setShowPollModal(true)}
+              />
             ) : (
               <div className="border-t border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-indigo-50 via-white to-violet-50 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900 p-4">
                 <div className="flex items-center justify-between gap-4">

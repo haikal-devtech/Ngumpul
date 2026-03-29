@@ -175,7 +175,7 @@ export default function CalendarPage() {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: idx * 0.05 }}
                           whileHover={{ x: 4 }}
-                          className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer shadow-sm"
+                          className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer shadow-sm group"
                         >
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <h4 className="font-bold text-zinc-900 dark:text-white text-sm leading-tight">{event.title}</h4>
@@ -188,7 +188,7 @@ export default function CalendarPage() {
                               {isOwned ? (language === "id" ? "Milik Saya" : "Mine") : (language === "id" ? "Bergabung" : "Joined")}
                             </span>
                           </div>
-                          <div className="space-y-1">
+                          <div className="space-y-1 mb-3">
                             {event.location && (
                               <p className="text-xs text-zinc-400 flex items-center gap-1 dark:text-zinc-500">
                                 <MapPin size={11} />
@@ -203,6 +203,36 @@ export default function CalendarPage() {
                               <Users size={11} />
                               {event.participants.length} {language === "id" ? "peserta" : "participants"}
                             </p>
+                          </div>
+
+                          {/* Export Buttons */}
+                          <div className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(`/api/events/${event.id}/export/ics`, '_blank');
+                              }}
+                              className="text-[10px] font-bold text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-400 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                            >
+                              <Calendar size={10} />
+                              .ICS
+                            </button>
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  const res = await fetch(`/api/events/${event.id}/export/google`, { method: 'POST' });
+                                  if (!res.ok) throw new Error();
+                                  alert(language === 'id' ? "Berhasil ditambahkan ke Google Calendar!" : "Successfully added to Google Calendar!");
+                                } catch (err) {
+                                  alert(language === 'id' ? "Gagal menghubungkan ke Google Calendar." : "Failed to connect to Google Calendar.");
+                                }
+                              }}
+                              className="text-[10px] font-bold text-zinc-500 hover:text-emerald-600 dark:text-zinc-400 dark:hover:text-emerald-400 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                            >
+                              <Calendar size={10} />
+                              Google
+                            </button>
                           </div>
                         </motion.div>
                       );
