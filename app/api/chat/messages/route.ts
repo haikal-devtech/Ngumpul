@@ -17,13 +17,30 @@ export async function GET(req: NextRequest) {
     }
 
     // Verify room exists
-    const room = await prisma.chatRoom.findUnique({ where: { id: roomId } });
+    const room = await prisma.chatRoom.findUnique({
+      where: { id: roomId },
+      include: { members: true },
+    });
+    
     if (!room) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
 
-    // Get blocked users for authenticated user
     const session = await auth();
+    const userId = session?.user?.id;
+
+    // Strict access control: if room is private, user must be a member
+    if (room.isPrivate) {
+      if (!userId) {
+         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      const isMember = room.members.some((m) => m.userId === userId);
+      if (!isMember) {
+        return NextResponse.json({ error: "Forbidden: Not a member of this private room" }, { status: 403 });
+      }
+    }
+
+    // Get blocked users for authenticated user
     const blockedUserIds: string[] = [];
     if (session?.user?.id) {
       const blocks = await prisma.blockedUser.findMany({
@@ -80,17 +97,23 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify room exists
-    const room = await prisma.chatRoom.findUnique({ where: { id: roomId } });
+    const room = await prisma.chatRoom.findUnique({ 
+      where: { id: roomId },
+      include: { members: true }
+    });
+    
     if (!room) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
+    
+    // Strict access control: if room is private, ensure the existing member has access
+    const existingMember = room.members.find((m) => m.userId === session.user.id);
+    if (room.isPrivate && !existingMember) {
+      return NextResponse.json({ error: "Forbidden: Cannot send messages to a private room without joining" }, { status: 403 });
+    }
 
-    // Auto-join room if not already a member
-    const existingMember = await prisma.chatMember.findUnique({
-      where: { roomId_userId: { roomId, userId: session.user.id } },
-    });
-
-    if (!existingMember) {
+    // Auto-join public room if not already a member
+    if (!existingMember && !room.isPrivate) {
       await prisma.chatMember.create({
         data: { roomId, userId: session.user.id, role: "member" },
       });

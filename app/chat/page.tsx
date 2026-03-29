@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import { uploadChatMedia } from "@/lib/supabase";
+import { Loader } from "@/components/ui/Loader";
 
 export default function ChatPage() {
   const { data: session } = useSession();
@@ -27,6 +28,9 @@ export default function ChatPage() {
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [showSidebar, setShowSidebar] = useState(true);
@@ -103,17 +107,65 @@ export default function ChatPage() {
   }, [selectedRoom]);
 
   // ── Fetch messages ────────────────────────────────────────────────────────
-  const fetchMessages = useCallback(async (roomId: string) => {
+  const fetchMessages = useCallback(async (roomId: string, cursor?: string | null) => {
+    if (cursor) setLoadingMore(true);
     try {
-      const res = await fetch(`/api/chat/messages?roomId=${roomId}`);
+      const url = new URL(`/api/chat/messages`, window.location.origin);
+      url.searchParams.set("roomId", roomId);
+      url.searchParams.set("limit", "50");
+      if (cursor) url.searchParams.set("cursor", cursor);
+
+      const res = await fetch(url.toString());
       if (res.ok) {
         const data = await res.json();
-        setMessages(data.messages || []);
+        // If loading older messages, prepend them. Otherwise, set as initial messages.
+        if (cursor) {
+           setMessages((prev) => [...data.messages, ...prev]);
+        } else {
+           setMessages(data.messages || []);
+           // Scroll to bottom on initial load
+           setTimeout(() => {
+             if (chatContainerRef.current) {
+               chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+             }
+           }, 100);
+        }
+        setNextCursor(data.nextCursor || null);
+        setHasMore(!!data.nextCursor);
+      } else if (res.status === 403) {
+         // unauthorized (not a member of a private room)
+         addToast("Akses ditolak / Access Denied", "error");
+         setSelectedRoom(null);
       }
     } catch (err) {
       console.error("Failed to fetch messages:", err);
+    } finally {
+      setLoadingMore(false);
     }
-  }, []);
+  }, [addToast]);
+
+  const loadMoreMessages = () => {
+    if (!selectedRoom || !hasMore || loadingMore || !nextCursor) return;
+    
+    // Save current scroll height to adjust after prepending
+    const container = chatContainerRef.current;
+    const oldScrollHeight = container?.scrollHeight || 0;
+    
+    fetchMessages(selectedRoom.id, nextCursor).then(() => {
+       if (container) {
+          const newScrollHeight = container.scrollHeight;
+          container.scrollTop = newScrollHeight - oldScrollHeight;
+       }
+    });
+  };
+
+  // ── Handle scroll to load more ────────────────────────────────────────────
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLDivElement;
+    if (target.scrollTop === 0 && hasMore && !loadingMore) {
+      loadMoreMessages();
+    }
+  };
 
   // ── Send message ──────────────────────────────────────────────────────────
   const sendMessage = async (overrideType?: 'text'|'image'|'sticker'|'emote', overrideContent?: string, mediaUrl?: string) => {
@@ -347,13 +399,19 @@ export default function ChatPage() {
     if (selectedRoom) fetchMessages(selectedRoom.id);
   }, [selectedRoom, fetchMessages]);
 
-  // ── Auto-scroll to bottom ─────────────────────────────────────────────────
+  // ── Auto-scroll to bottom only for initial load or new message sent ───────
   useEffect(() => {
+    // Only auto-scroll to bottom if user is already near bottom
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTo({
-        top: chatContainerRef.current.scrollHeight,
-        behavior: "smooth"
-      });
+      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+      
+      if (isNearBottom) {
+        chatContainerRef.current.scrollTo({
+          top: scrollHeight,
+          behavior: "smooth"
+        });
+      }
     }
   }, [messages]);
 
@@ -518,9 +576,7 @@ export default function ChatPage() {
             {/* Room List */}
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
               {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-                </div>
+                <Loader className="py-12" />
               ) : rooms.length === 0 ? (
                 <div className="text-center py-12 px-4">
                   <Hash size={32} className="text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
@@ -668,8 +724,34 @@ export default function ChatPage() {
               {/* Message Feed */}
               <div
                 ref={chatContainerRef}
-                className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
+                onScroll={handleScroll}
+                className="flex-1 overflow-y-auto px-4 py-4 space-y-1 relative"
               >
+                {/* Visual loading feedback while sending */}
+                <AnimatePresence>
+                  {(sendingMessage || uploadingMedia) && (
+                     <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-x-0 bottom-4 flex justify-center z-10 pointer-events-none"
+                     >
+                        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur rounded-full px-4 py-2 shadow-sm border border-zinc-200 dark:border-zinc-800 flex items-center gap-2">
+                           <Loader2 size={14} className="animate-spin text-indigo-500" />
+                           <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                             {uploadingMedia ? (language === 'id' ? 'Mengunggah...' : 'Uploading...') : (language === 'id' ? 'Mengirim...' : 'Sending...')}
+                           </span>
+                        </div>
+                     </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Loading older messages indicator */}
+                {loadingMore && (
+                  <div className="flex justify-center py-4">
+                     <Loader2 size={20} className="animate-spin text-indigo-400" />
+                  </div>
+                )}
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center py-20">
                     <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center mb-4">
