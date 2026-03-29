@@ -49,6 +49,14 @@ model User {
   sessions      Session[]
   events        Event[]       @relation("HostEvents")
   participants  Participant[]
+
+  // Chat relations
+  chatMessages     ChatMessage[]
+  chatMemberships  ChatMember[]
+  createdRooms     ChatRoom[]        @relation("RoomCreator")
+  blockedUsers     BlockedUser[]     @relation("Blocker")
+  blockedByUsers   BlockedUser[]     @relation("Blocked")
+  reportedMessages ReportedMessage[]
 }
 
 model VerificationToken {
@@ -83,6 +91,7 @@ model Event {
   participants     Participant[]
   availabilities   Availability[]
   participant_locations ParticipantLocation[]
+  chatRooms        ChatRoom[]
 }
 
 model Participant {
@@ -124,4 +133,70 @@ model ParticipantLocation {
 
   participant    Participant @relation(fields: [participant_id], references: [id], onDelete: Cascade)
   event          Event       @relation(fields: [event_id], references: [id], onDelete: Cascade)
+}
+
+// ── Chat Models ──────────────────────────────────────────────────────────────
+
+model ChatRoom {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  type        String   @default("general") // general | event | team
+  eventId     String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  event       Event?       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdBy   User         @relation("RoomCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  messages    ChatMessage[]
+  members     ChatMember[]
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  roomId    String
+  senderId  String
+  content   String
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  room    ChatRoom          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender  User              @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  reports ReportedMessage[]
+}
+
+model ChatMember {
+  id       String   @id @default(cuid())
+  roomId   String
+  userId   String
+  role     String   @default("member") // admin | moderator | member
+  joinedAt DateTime @default(now())
+
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+}
+
+model BlockedUser {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+}
+
+model ReportedMessage {
+  id         String   @id @default(cuid())
+  messageId  String
+  reporterId String
+  reason     String
+  createdAt  DateTime @default(now())
+
+  message  ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  reporter User        @relation(fields: [reporterId], references: [id], onDelete: Cascade)
 }

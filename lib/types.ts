@@ -58,3 +58,43 @@ export interface Toast {
   message: string;
   type: 'success' | 'error' | 'info';
 }
+
+// ── Chat Types ──────────────────────────────────────────────────────────────
+
+export interface ChatRoom {
+  id: string;
+  name: string;
+  description?: string | null;
+  type: 'general' | 'event' | 'team';
+  eventId?: string | null;
+  createdById: string;
+  createdAt: string;
+  createdBy?: { id: string; name: string | null; image: string | null };
+  _count?: { members: number; messages: number };
+  members?: { role: string }[];
+}
+
+export interface ChatMessage {
+  id: string;
+  roomId: string;
+  senderId: string;
+  content: string;
+  isDeleted: boolean;
+  createdAt: string;
+  sender: { id: string; name: string | null; image: string | null };
+}
+
+export interface ChatMember {
+  id: string;
+  roomId: string;
+  userId: string;
+  role: 'admin' | 'moderator' | 'member';
+  joinedAt: string;
+}
+
+export interface OnlineUser {
+  id: string;
+  name: string;
+  image?: string | null;
+  online_at: string;
+}

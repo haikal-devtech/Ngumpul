@@ -35,6 +35,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (pathname.includes("/event/")) return "event";
     if (pathname.includes("/teams")) return "teams";
     if (pathname.includes("/calendar")) return "calendar";
+    if (pathname.includes("/chat")) return "chat";
     return "landing";
   };
 
@@ -45,6 +46,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       case "create": router.push("/event/new"); break;
       case "teams": router.push("/teams"); break;
       case "calendar": router.push("/calendar"); break;
+      case "chat": router.push("/chat"); break;
       case "login": router.push("/login"); break;
       case "profile": router.push("/profile"); break;
       default: router.push(`/${view}`);

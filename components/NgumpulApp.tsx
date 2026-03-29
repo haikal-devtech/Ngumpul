@@ -41,6 +41,7 @@ export const Navbar = ({
     ...(hasEvents ? [{ id: 'dashboard', label: language === 'id' ? 'Acara Saya' : 'My Events' }] : []),
     { id: 'calendar', label: language === 'id' ? 'Kalender' : 'Calendar' },
     { id: 'teams', label: language === 'id' ? 'Tim' : 'Teams' },
+    { id: 'chat', label: 'Chat' },
   ];
 
   const handleMobileNav = (id: string) => {
