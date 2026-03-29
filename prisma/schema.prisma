@@ -141,6 +141,7 @@ model ChatRoom {
   id          String   @id @default(cuid())
   name        String
   description String?
+  inviteCode  String?  @unique
   type        String   @default("general") // general | event | team
   eventId     String?
   createdById String
@@ -157,6 +158,8 @@ model ChatMessage {
   roomId    String
   senderId  String
   content   String
+  type      String   @default("text") // text | image | sticker | emote
+  mediaUrl  String?
   isDeleted Boolean  @default(false)
   createdAt DateTime @default(now())
 

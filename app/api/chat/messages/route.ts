@@ -69,10 +69,14 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { roomId, content } = body;
+    const { roomId, content, type = "text", mediaUrl = null } = body;
 
-    if (!roomId || !content || content.trim().length === 0) {
-      return NextResponse.json({ error: "roomId and content are required" }, { status: 400 });
+    if (!roomId) {
+      return NextResponse.json({ error: "roomId is required" }, { status: 400 });
+    }
+    // Allow empty text content if it's media
+    if (type === "text" && (!content || content.trim().length === 0)) {
+       return NextResponse.json({ error: "content is required for text messages" }, { status: 400 });
     }
 
     // Verify room exists
@@ -96,7 +100,9 @@ export async function POST(req: NextRequest) {
       data: {
         roomId,
         senderId: session.user.id,
-        content: content.trim(),
+        content: content?.trim() || "",
+        type,
+        mediaUrl,
       },
       include: {
         sender: { select: { id: true, name: true, image: true } },

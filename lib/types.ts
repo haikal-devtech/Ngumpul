@@ -79,6 +79,8 @@ export interface ChatMessage {
   roomId: string;
   senderId: string;
   content: string;
+  type: 'text' | 'image' | 'sticker' | 'emote';
+  mediaUrl?: string | null;
   isDeleted: boolean;
   createdAt: string;
   sender: { id: string; name: string | null; image: string | null };

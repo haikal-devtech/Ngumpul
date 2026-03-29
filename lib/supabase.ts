@@ -10,3 +10,33 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     },
   },
 });
+
+export const uploadChatMedia = async (file: File, roomId: string) => {
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${roomId}/${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+    
+    // Upload standard to chat-media bucket
+    const { data, error } = await supabase.storage
+      .from('chat-media')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('File upload error:', error.message);
+      return { url: null, error: error.message };
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('chat-media')
+      .getPublicUrl(fileName);
+
+    return { url: publicUrl, error: null };
+  } catch (error: any) {
+    console.error('Exception during upload:', error);
+    return { url: null, error: error.message };
+  }
+};

@@ -10,9 +10,13 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   MessageCircle, Hash, Users, Send, Plus, X, LogIn,
   MoreVertical, Flag, Ban, Shield, ChevronLeft, Wifi, WifiOff,
+  UserPlus, Link2, Check, Pickaxe, Smile, Image as ImageIcon,
+  Paperclip, Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
+import { uploadChatMedia } from "@/lib/supabase";
 
 export default function ChatPage() {
   const { data: session } = useSession();
@@ -35,6 +39,12 @@ export default function ChatPage() {
   const [newRoomName, setNewRoomName] = useState("");
   const [newRoomDesc, setNewRoomDesc] = useState("");
   const [isConnected, setIsConnected] = useState(false);
+  const [copiedInvite, setCopiedInvite] = useState(false);
+  const [generatingInvite, setGeneratingInvite] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showAttachments, setShowAttachments] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -66,6 +76,9 @@ export default function ChatPage() {
     connected: language === "id" ? "Terhubung" : "Connected",
     disconnected: language === "id" ? "Terputus" : "Disconnected",
     guestBanner: language === "id" ? "Masuk untuk mengirim pesan dan bergabung dalam percakapan" : "Sign in to send messages and join the conversation",
+    inviteLink: language === "id" ? "Undang" : "Invite",
+    inviteCopied: language === "id" ? "Tautan Disalin!" : "Link Copied!",
+    inviteError: language === "id" ? "Gagal membuat tautan" : "Failed to generate link",
   };
 
   // ── Fetch rooms ───────────────────────────────────────────────────────────
@@ -100,19 +113,29 @@ export default function ChatPage() {
   }, []);
 
   // ── Send message ──────────────────────────────────────────────────────────
-  const sendMessage = async () => {
+  const sendMessage = async (overrideType?: 'text'|'image'|'sticker'|'emote', overrideContent?: string, mediaUrl?: string) => {
     if (!session || !currentUser) {
       setShowLoginGate(true);
       return;
     }
-    if (!selectedRoom || !newMessage.trim() || sendingMessage) return;
+    
+    const type = overrideType || 'text';
+    const contentToSend = overrideContent || newMessage;
+    
+    if (!selectedRoom || sendingMessage) return;
+    if (type === 'text' && !contentToSend.trim()) return;
 
     setSendingMessage(true);
     try {
       const res = await fetch("/api/chat/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomId: selectedRoom.id, content: newMessage.trim() }),
+        body: JSON.stringify({ 
+          roomId: selectedRoom.id, 
+          content: contentToSend.trim(),
+          type,
+          mediaUrl: mediaUrl || null
+        }),
       });
       if (res.ok) {
         const msg = await res.json();
@@ -133,6 +156,46 @@ export default function ChatPage() {
     }
   };
 
+  // ── Handle Media Upload ───────────────────────────────────────────────────
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedRoom || !currentUser) return;
+
+    // Validate size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      addToast(language === 'id' ? 'Ukuran file maksimal 5MB' : 'Max file size is 5MB', 'error');
+      return;
+    }
+
+    setUploadingMedia(true);
+    setShowAttachments(false);
+    try {
+      const { url, error } = await uploadChatMedia(file, selectedRoom.id);
+      if (error || !url) {
+        addToast(language === 'id' ? 'Gagal mengunggah media' : 'Failed to upload media', 'error');
+        return;
+      }
+      
+      // Send image message once uploaded
+      await sendMessage('image', 'Image', url);
+    } catch {
+      addToast(language === 'id' ? 'Gagal mengunggah media' : 'Failed to upload media', 'error');
+    } finally {
+      setUploadingMedia(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    setNewMessage((prev) => prev + emojiData.emoji);
+  };
+
+  const sendEmote = (emoteName: string) => {
+    sendMessage('emote', emoteName);
+    setShowEmojiPicker(false);
+    setShowAttachments(false);
+  };
+  
   // ── Create room ───────────────────────────────────────────────────────────
   const createRoom = async () => {
     if (!session) {
@@ -157,6 +220,28 @@ export default function ChatPage() {
       }
     } catch (err) {
       console.error("Failed to create room:", err);
+    }
+  };
+
+  // ── Generate Invite Link ──────────────────────────────────────────────────
+  const generateInviteLink = async () => {
+    if (!selectedRoom || generatingInvite) return;
+    setGeneratingInvite(true);
+    try {
+      const res = await fetch(`/api/chat/rooms/${selectedRoom.id}/invite`);
+      if (res.ok) {
+        const data = await res.json();
+        const inviteUrl = `${window.location.origin}/chat/invite/${data.inviteCode}`;
+        await navigator.clipboard.writeText(inviteUrl);
+        setCopiedInvite(true);
+        setTimeout(() => setCopiedInvite(false), 2000);
+      } else {
+        addToast(t.inviteError, "error");
+      }
+    } catch (err) {
+      addToast(t.inviteError, "error");
+    } finally {
+      setGeneratingInvite(false);
     }
   };
 
@@ -464,6 +549,24 @@ export default function ChatPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {session && currentUser && (
+                  <button
+                    onClick={generateInviteLink}
+                    disabled={generatingInvite}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
+                  >
+                    {generatingInvite ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : copiedInvite ? (
+                      <Check size={14} />
+                    ) : (
+                      <UserPlus size={14} />
+                    )}
+                    <span className="hidden sm:inline">
+                      {copiedInvite ? t.inviteCopied : t.inviteLink}
+                    </span>
+                  </button>
+                )}
                 <button
                   onClick={() => setShowOnlinePanel(!showOnlinePanel)}
                   className={cn(
@@ -541,16 +644,39 @@ export default function ChatPage() {
                                 </div>
                               )}
                               <div className="relative">
-                                <div
-                                  className={cn(
-                                    "px-3.5 py-2 rounded-2xl text-sm leading-relaxed break-words",
-                                    isOwn
-                                      ? "bg-indigo-600 text-white rounded-tr-md"
-                                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-tl-md"
-                                  )}
-                                >
-                                  {msg.content}
-                                </div>
+                                {msg.type === "image" && msg.mediaUrl ? (
+                                  <div className={cn(
+                                    "rounded-2xl overflow-hidden p-1 shadow-sm",
+                                    isOwn ? "bg-indigo-600 rounded-tr-md" : "bg-zinc-100 dark:bg-zinc-800 rounded-tl-md"
+                                  )}>
+                                    <img 
+                                      src={msg.mediaUrl} 
+                                      alt="Chat Attachment" 
+                                      className="max-w-full sm:max-w-xs h-auto max-h-64 object-cover rounded-xl"
+                                      loading="lazy"
+                                    />
+                                    {msg.content !== "Image" && (
+                                      <p className={cn("px-2 py-1.5 text-sm", isOwn ? "text-white" : "text-zinc-900 dark:text-锌-100")}>
+                                        {msg.content}
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : msg.type === "emote" ? (
+                                  <div className="text-4xl px-2 py-1">
+                                    {msg.content}
+                                  </div>
+                                ) : (
+                                  <div
+                                    className={cn(
+                                      "px-3.5 py-2 rounded-2xl text-sm leading-relaxed break-words",
+                                      isOwn
+                                        ? "bg-indigo-600 text-white rounded-tr-md"
+                                        : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-tl-md"
+                                    )}
+                                  >
+                                    {msg.content}
+                                  </div>
+                                )}
                                 {/* Context menu trigger */}
                                 {session && !isOwn && (
                                   <button
@@ -626,31 +752,120 @@ export default function ChatPage() {
 
             {/* Message Input / Guest Banner */}
             {session && currentUser ? (
-              <div className="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-3 sm:p-4">
-                <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 rounded-2xl px-4 py-2 border border-zinc-200 dark:border-zinc-800 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-900/30 transition-all">
+              <div className="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-3 sm:p-4 relative">
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp, image/gif"
+                  className="hidden"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                />
+                
+                {/* Emoji / Attachments popover */}
+                <AnimatePresence>
+                  {showEmojiPicker && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute bottom-full mb-4 md:mb-6 left-4 z-50 shadow-2xl rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800"
+                    >
+                      <EmojiPicker
+                        onEmojiClick={handleEmojiClick}
+                        theme={Theme.AUTO}
+                        lazyLoadEmojis={true}
+                        searchDisabled={false}
+                        skinTonesDisabled={true}
+                        height={350}
+                        width={300}
+                      />
+                    </motion.div>
+                  )}
+                  {showAttachments && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute bottom-full mb-4 left-4 z-40 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl w-48 p-2 flex flex-col gap-1"
+                    >
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm font-semibold text-zinc-700 dark:text-zinc-300 transition-colors"
+                      >
+                        <ImageIcon size={16} className="text-blue-500" />
+                        {language === 'id' ? 'Gambar' : 'Image'}
+                      </button>
+                      <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
+                      <div className="px-3 py-1.5 text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                        {language === 'id' ? 'Kirim Emote' : 'Send Emote'}
+                      </div>
+                      <div className="flex gap-2 p-2">
+                        {['👍', '❤️', '🔥', '🎉'].map(emote => (
+                          <button
+                            key={emote}
+                            onClick={() => sendEmote(emote)}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xl transition-transform hover:scale-125 focus:outline-none"
+                          >
+                            {emote}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 rounded-2xl px-2 py-2 border border-zinc-200 dark:border-zinc-800 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-900/30 transition-all">
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => {
+                        setShowAttachments(!showAttachments);
+                        setShowEmojiPicker(false);
+                      }}
+                      className={cn(
+                        "w-9 h-9 rounded-xl flex items-center justify-center transition-colors focus:outline-none",
+                        showAttachments ? "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40" : "text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                      )}
+                    >
+                      <Plus size={20} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowEmojiPicker(!showEmojiPicker);
+                        setShowAttachments(false);
+                      }}
+                      className={cn(
+                        "w-9 h-9 rounded-xl flex items-center justify-center transition-colors focus:outline-none hidden sm:flex",
+                        showEmojiPicker ? "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-white" : "text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                      )}
+                    >
+                      <Smile size={18} />
+                    </button>
+                  </div>
+                  
                   <input
                     ref={inputRef}
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder={t.typeMessage}
-                    className="flex-1 bg-transparent border-none outline-none text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400"
-                    disabled={sendingMessage}
+                    placeholder={uploadingMedia ? (language==='id'?'Mengunggah...':'Uploading...') : t.typeMessage}
+                    className="flex-1 bg-transparent border-none outline-none text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 px-2 min-w-0"
+                    disabled={sendingMessage || uploadingMedia}
                   />
+                  
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={sendMessage}
-                    disabled={!newMessage.trim() || sendingMessage}
+                    onClick={() => sendMessage('text')}
+                    disabled={!newMessage.trim() || sendingMessage || uploadingMedia}
                     className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center transition-colors shrink-0",
+                      "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-colors shrink-0 focus:outline-none",
                       newMessage.trim()
-                        ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                        : "bg-zinc-200 dark:bg-zinc-700 text-zinc-400"
+                        ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/20"
+                        : "bg-zinc-200 dark:bg-zinc-800 text-zinc-400"
                     )}
                   >
-                    <Send size={16} />
+                    {uploadingMedia ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} className="ml-0.5" />}
                   </motion.button>
                 </div>
               </div>
