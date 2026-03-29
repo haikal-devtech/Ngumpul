@@ -872,10 +872,9 @@ export default function ChatPage() {
                     TERPUTUS
                   </>
                 )
-              ) : (
                 <>
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  READY
+                  CONNECTED
                 </>
               )}
             </div>
