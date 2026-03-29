@@ -1,13 +1,16 @@
 "use client";
 
-import { Suspense, useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useAppContext } from "@/components/AppContext";
 import { Team } from "@/lib/types";
 
 function decodeTeamFromHash(hash: string): { id: string; name: string; desc: string; code: string } | null {
   try {
-    const decoded = decodeURIComponent(escape(atob(hash)));
+    let b64 = hash.replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    const decoded = decodeURIComponent(escape(atob(b64)));
     const data = JSON.parse(decoded);
     if (data.id && data.name && data.code) return data;
     return null;
@@ -18,10 +21,11 @@ function decodeTeamFromHash(hash: string): { id: string; name: string; desc: str
 
 function JoinTeamContent() {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const { currentUser, teams, setTeams, setCurrentTeam, language, addToast } = useAppContext();
   const [status, setStatus] = useState<"loading" | "joining" | "success" | "error" | "not-found">("loading");
   const [teamName, setTeamName] = useState("");
-  const processed = useRef(false);
+  const [processed, setProcessed] = useState(false);
 
   const t = {
     loading: language === "id" ? "Memuat..." : "Loading...",
@@ -39,37 +43,44 @@ function JoinTeamContent() {
   };
 
   useEffect(() => {
-    if (processed.current) return;
-    processed.current = true;
+    // Wait for session to finish loading before processing
+    if (sessionStatus === "loading") return;
+
+    // Already processed — don't run again
+    if (processed) return;
 
     // Read team data from URL hash
-    const hash = window.location.hash.slice(1); // Remove the # prefix
+    const hash = window.location.hash.slice(1);
     if (!hash) {
+      setProcessed(true);
       setStatus("not-found");
       return;
     }
 
     const teamData = decodeTeamFromHash(hash);
     if (!teamData) {
+      setProcessed(true);
       setStatus("not-found");
       return;
     }
 
     setTeamName(teamData.name);
 
-    // Check if user is logged in
+    // If user is not logged in, show login prompt (don't mark as processed
+    // so they can retry after logging in)
     if (!currentUser) {
       setStatus("error");
       return;
     }
 
+    setProcessed(true);
     setStatus("joining");
 
-    // Check if team already exists in local storage
+    // Check if team already exists locally
     const existingTeam = teams.find(t => t.id === teamData.id || t.inviteCode === teamData.code);
 
     if (existingTeam) {
-      // Check if user is already a member
+      // Already a member?
       const alreadyMember = existingTeam.members.some(m => m.id === currentUser.id);
       if (alreadyMember) {
         setStatus("success");
@@ -124,7 +135,7 @@ function JoinTeamContent() {
     setStatus("success");
     addToast(language === 'id' ? `Bergabung dengan ${teamData.name}!` : `Joined ${teamData.name}!`, 'success');
     setTimeout(() => router.push("/teams"), 1500);
-  }, [currentUser, teams, setTeams, setCurrentTeam, router, language, addToast, t.alreadyMember]);
+  }, [sessionStatus, currentUser, processed]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900 flex items-center justify-center px-4">
@@ -186,8 +197,7 @@ function JoinTeamContent() {
               <p className="text-sm text-zinc-400 dark:text-zinc-500 mb-4">{t.pleaseLoginDesc}</p>
               <button
                 onClick={() => {
-                  // Save the current URL so we can redirect back after login
-                  sessionStorage.setItem('ngumpul_redirect_after_login', window.location.pathname + window.location.hash);
+                  sessionStorage.setItem('ngumpul_redirect_after_login', window.location.pathname + window.location.search + window.location.hash);
                   router.push("/login");
                 }}
                 className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors"

@@ -12,7 +12,15 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (session) router.replace("/dashboard");
+    if (session) {
+      const redirect = sessionStorage.getItem('ngumpul_redirect_after_login');
+      if (redirect) {
+        sessionStorage.removeItem('ngumpul_redirect_after_login');
+        router.replace(redirect);
+      } else {
+        router.replace("/dashboard");
+      }
+    }
   }, [session, router]);
 
   const t = {
@@ -35,7 +43,8 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
-    await signIn("google", { callbackUrl: "/dashboard" });
+    const redirect = sessionStorage.getItem('ngumpul_redirect_after_login');
+    await signIn("google", { callbackUrl: redirect || "/dashboard" });
   };
 
   if (status === "loading") {

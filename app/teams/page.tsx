@@ -24,12 +24,19 @@ function encodeTeamForUrl(team: { id: string; name: string; description?: string
     desc: team.description || "",
     code: team.inviteCode,
   });
-  return btoa(unescape(encodeURIComponent(data)));
+  // URL-safe base64: replace + with -, / with _, strip =
+  return btoa(unescape(encodeURIComponent(data)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 function decodeTeamFromUrl(hash: string): { id: string; name: string; desc: string; code: string } | null {
   try {
-    const decoded = decodeURIComponent(escape(atob(hash)));
+    // Restore standard base64 from URL-safe encoding
+    let b64 = hash.replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    const decoded = decodeURIComponent(escape(atob(b64)));
     const data = JSON.parse(decoded);
     if (data.id && data.name && data.code) return data;
     return null;
