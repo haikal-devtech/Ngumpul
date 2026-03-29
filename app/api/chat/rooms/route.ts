@@ -10,7 +10,18 @@ export async function GET() {
     const session = await auth();
     const userId = session?.user?.id;
 
+    // Filter out private rooms unless the user is a member
+    const whereClause = userId
+      ? {
+          OR: [
+            { isPrivate: false },
+            { members: { some: { userId } } },
+          ],
+        }
+      : { isPrivate: false };
+
     const rooms = await prisma.chatRoom.findMany({
+      where: whereClause,
       include: {
         _count: { select: { members: true, messages: true } },
         members: userId
@@ -37,7 +48,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, description, type, eventId } = body;
+    const { name, description, type, eventId, isPrivate, requiresApproval } = body;
 
     if (!name || name.trim().length === 0) {
       return NextResponse.json({ error: "Room name is required" }, { status: 400 });
@@ -50,6 +61,8 @@ export async function POST(req: NextRequest) {
         type: type || "general",
         eventId: eventId || null,
         createdById: session.user.id,
+        isPrivate: isPrivate ?? false,
+        requiresApproval: requiresApproval ?? false,
         members: {
           create: {
             userId: session.user.id,

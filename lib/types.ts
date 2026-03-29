@@ -66,6 +66,8 @@ export interface ChatRoom {
   name: string;
   description?: string | null;
   type: 'general' | 'event' | 'team';
+  isPrivate: boolean;
+  requiresApproval: boolean;
   eventId?: string | null;
   createdById: string;
   createdAt: string;

@@ -1063,6 +1063,104 @@ export default function ChatPage() {
           </>
         )}
       </AnimatePresence>
+
+      {/* ── Admin Join Requests Modal ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showJoinRequests && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowJoinRequests(false)}
+              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md"
+            >
+              <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-6 mx-4">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                      <Shield size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                        {language === 'id' ? 'Permintaan Bergabung' : 'Join Requests'}
+                      </h3>
+                      <p className="text-xs text-zinc-500">
+                        {selectedRoom?.name}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowJoinRequests(false)}
+                    className="w-8 h-8 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+                  {loadingRequests ? (
+                    <div className="flex justify-center p-8 text-zinc-400">
+                      <Loader2 className="animate-spin" />
+                    </div>
+                  ) : joinRequests.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="w-16 h-16 rounded-full bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center mb-3">
+                        <Users size={24} className="text-zinc-400" />
+                      </div>
+                      <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                        {language === 'id' ? 'Tidak ada permintaan tertunda.' : 'No pending requests.'}
+                      </p>
+                    </div>
+                  ) : (
+                    joinRequests.map(req => (
+                      <div key={req.id} className="flex items-center justify-between p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30">
+                        <div className="flex items-center gap-3 w-full min-w-0">
+                          {req.user.image ? (
+                            <img src={req.user.image} alt={req.user.name || "User"} className="w-10 h-10 rounded-full object-cover shrink-0" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0">
+                              {req.user.name?.[0].toUpperCase() || "?"}
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="font-bold text-sm text-zinc-900 dark:text-white truncate">
+                              {req.user.name || "Unknown User"}
+                            </div>
+                            <div className="text-xs text-zinc-500 truncate">
+                              {req.user.email}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                            <button
+                              onClick={() => handleJoinRequest(req.id, 'reject')}
+                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-zinc-600 dark:text-zinc-400 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
+                            >
+                              {language === 'id' ? 'Tolak' : 'Reject'}
+                            </button>
+                            <button
+                              onClick={() => handleJoinRequest(req.id, 'approve')}
+                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-600/20"
+                            >
+                              {language === 'id' ? 'Setujui' : 'Approve'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

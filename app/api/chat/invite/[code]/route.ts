@@ -32,14 +32,32 @@ export async function POST(
     });
 
     if (!existingMember) {
-      // Add user to room
-      await prisma.chatMember.create({
-        data: {
-          roomId: room.id,
-          userId: session.user.id,
-          role: "member",
-        },
-      });
+      if (room.requiresApproval) {
+        // Check if there is already a pending request
+        const existingRequest = await prisma.chatJoinRequest.findUnique({
+          where: { roomId_userId: { roomId: room.id, userId: session.user.id } },
+        });
+
+        if (!existingRequest) {
+          await prisma.chatJoinRequest.create({
+            data: {
+              roomId: room.id,
+              userId: session.user.id,
+              status: "pending",
+            },
+          });
+        }
+        return NextResponse.json({ roomId: room.id, requiresApproval: true, status: "pending" });
+      } else {
+        // Add user to room directly
+        await prisma.chatMember.create({
+          data: {
+            roomId: room.id,
+            userId: session.user.id,
+            role: "member",
+          },
+        });
+      }
     }
 
     return NextResponse.json({ roomId: room.id });

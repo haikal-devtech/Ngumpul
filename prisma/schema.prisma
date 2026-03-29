@@ -57,6 +57,7 @@ model User {
   blockedUsers     BlockedUser[]     @relation("Blocker")
   blockedByUsers   BlockedUser[]     @relation("Blocked")
   reportedMessages ReportedMessage[]
+  chatJoinRequests ChatJoinRequest[]
 }
 
 model VerificationToken {
@@ -140,17 +141,20 @@ model ParticipantLocation {
 model ChatRoom {
   id          String   @id @default(cuid())
   name        String
-  description String?
-  inviteCode  String?  @unique
-  type        String   @default("general") // general | event | team
-  eventId     String?
-  createdById String
-  createdAt   DateTime @default(now())
+  description      String?
+  inviteCode       String?  @unique
+  type             String   @default("general") // general | event | team
+  isPrivate        Boolean  @default(false)
+  requiresApproval Boolean  @default(false)
+  eventId          String?
+  createdById      String
+  createdAt        DateTime @default(now())
 
   event       Event?       @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  createdBy   User         @relation("RoomCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy   User                  @relation("RoomCreator", fields: [createdById], references: [id], onDelete: Cascade)
   messages    ChatMessage[]
   members     ChatMember[]
+  joinRequests ChatJoinRequest[]
 }
 
 model ChatMessage {
@@ -174,6 +178,19 @@ model ChatMember {
   userId   String
   role     String   @default("member") // admin | moderator | member
   joinedAt DateTime @default(now())
+
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+}
+
+model ChatJoinRequest {
+  id        String   @id @default(cuid())
+  roomId    String
+  userId    String
+  status    String   @default("pending") // pending | approved | rejected
+  createdAt DateTime @default(now())
 
   room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
