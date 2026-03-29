@@ -71,17 +71,22 @@ export async function DELETE(
 
     if (message.senderId !== userId) {
       // Check if user is admin of the room
-      const member = await prisma.chatMember.findUnique({
+      const member = await prisma.chatMember.findFirst({
         where: {
-          roomId_userId: {
-            roomId: message.roomId,
-            userId: userId
-          }
+          roomId: message.roomId,
+          userId: userId,
+          role: 'ADMIN'
         }
       });
       
-      if (member?.role !== 'admin') {
+      if (!member) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    } else {
+      // Check if within 5 minutes for the sender
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      if (message.createdAt < fiveMinutesAgo) {
+        return NextResponse.json({ error: "Message cannot be deleted after 5 minutes" }, { status: 400 });
       }
     }
 

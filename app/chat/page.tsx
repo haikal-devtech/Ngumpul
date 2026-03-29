@@ -9,15 +9,16 @@ import { ChatRoom, ChatMessage, OnlineUser } from "@/lib/types";
 import { motion, AnimatePresence } from "motion/react";
 import {
   MessageCircle, Hash, Users, Send, Plus, X, LogIn,
-  MoreVertical, Flag, Ban, Shield, ChevronLeft, Wifi, WifiOff,
+  MoreVertical, Flag, Ban, Shield, ChevronLeft, ChevronRight, Wifi, WifiOff,
   UserPlus, Link2, Check, Pickaxe, Smile, Image as ImageIcon,
-  Paperclip, Loader2, MapPin, BarChart2
+  Paperclip, Loader2, MapPin, BarChart2, Pin, PinOff
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import { uploadChatMedia } from "@/lib/supabase";
 import { Loader } from "@/components/ui/Loader";
+import confetti from 'canvas-confetti';
 
 export default function ChatPage() {
   const { data: session, status } = useSession();
@@ -58,6 +59,8 @@ export default function ChatPage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [showMembers, setShowMembers] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<{ id: string; name: string; image: string }[]>([]);
+  const [latestMedia, setLatestMedia] = useState<ChatMessage | null>(null);
   const [roomMembers, setRoomMembers] = useState<any[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [cancellingRoom, setCancellingRoom] = useState(false);
@@ -68,6 +71,7 @@ export default function ChatPage() {
   const [polls, setPolls] = useState<any[]>([]);
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [typingTimeoutRef, setTypingTimeoutRef] = useState<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -138,6 +142,61 @@ export default function ChatPage() {
       setLoading(false);
     }
   }, [selectedRoom, session]);
+
+  const handlePinRoom = async (roomId: string, isPinned: boolean) => {
+    try {
+      const res = await fetch(`/api/chat/rooms/${roomId}/pin`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPinned })
+      });
+      if (res.ok) {
+        addToast(isPinned ? 'Berhasil disematkan' : 'Sematkan dilepas', 'success');
+        fetchRooms();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    if (!messages.length) { setLatestMedia(null); return; }
+    const media = [...messages].reverse().find(m => m.type === 'image' || m.type === 'location' || m.type === 'poll');
+    setLatestMedia(media || null);
+  }, [messages]);
+
+  const scrollToMessage = (messageId: string) => {
+    const el = document.getElementById(`msg-${messageId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('bg-indigo-50/50', 'dark:bg-indigo-900/10');
+      setTimeout(() => el.classList.remove('bg-indigo-50/50', 'dark:bg-indigo-900/10'), 2000);
+    }
+  };
+
+  const handleFinalizePoll = async (pollId: string) => {
+    try {
+      const res = await fetch(`/api/chat/polls/${pollId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFinalized: true })
+      });
+      if (res.ok) {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#6366f1', '#a855f7', '#ec4899']
+        });
+        addToast(language === 'id' ? 'Polling difinalisasi!' : 'Poll finalized!', 'success');
+        // Update local state is complex as polls are inside messages or in a separate state
+        // Re-fetching polls is safer
+        if (selectedRoom) fetchPolls(selectedRoom.id);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // ── Fetch Polls ───────────────────────────────────────────────────────────
   const fetchPolls = useCallback(async (roomId: string) => {
@@ -276,21 +335,63 @@ export default function ChatPage() {
     }
   };
 
+  // ── Image Compression ─────────────────────────────────────────────────────
+  const compressImage = (file: File): Promise<File | Blob> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+            } else {
+              resolve(file);
+            }
+          }, 'image/jpeg', 0.8);
+        };
+      };
+    });
+  };
+
   // ── Handle Media Upload ───────────────────────────────────────────────────
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedRoom || !currentUser) return;
 
-    // Validate size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      addToast(language === 'id' ? 'Ukuran file maksimal 5MB' : 'Max file size is 5MB', 'error');
-      return;
-    }
-
     setUploadingMedia(true);
     setShowAttachments(false);
     try {
-      const { url, error } = await uploadChatMedia(file, selectedRoom.id);
+      let fileToUpload: File | Blob = file;
+      if (file.size > 1024 * 1024) { // 1MB
+        fileToUpload = await compressImage(file);
+      }
+      
+      const { url, error } = await uploadChatMedia(fileToUpload as File, selectedRoom.id);
       if (error || !url) {
         addToast(language === 'id' ? 'Gagal mengunggah media' : 'Failed to upload media', 'error');
         return;
@@ -435,25 +536,29 @@ export default function ChatPage() {
   };
 
   const handleDeleteMessage = async (messageId: string) => {
+    const msg = messages.find(m => m.id === messageId);
+    if (!msg) return;
+    
+    // Check 5-minute limit (unless admin)
+    const isAdmin = roomMembers.find(m => m.userId === currentUser?.id)?.role === 'ADMIN';
+    const isOwn = msg.senderId === currentUser?.id;
+    const isWithin5Mins = Date.now() - new Date(msg.createdAt).getTime() < 5 * 60 * 1000;
+    
+    if (!isAdmin && isOwn && !isWithin5Mins) {
+      addToast(language === 'id' ? 'Pesan tidak bisa dihapus setelah 5 menit' : 'Messages cannot be deleted after 5 minutes', 'error');
+      return;
+    }
+
     if (!window.confirm(language === 'id' ? 'Hapus pesan ini?' : 'Delete this message?')) return;
     try {
-      const res = await fetch(`/api/chat/messages/${messageId}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`/api/chat/messages/${messageId}`, { method: 'DELETE' });
       if (res.ok) {
-        const updated = await res.json();
-        setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
         addToast(language === 'id' ? 'Pesan dihapus' : 'Message deleted', 'success');
-        
-        // Broadcast update
-        supabase.channel(`room:${selectedRoom!.id}`).send({
-          type: "broadcast",
-          event: "message_updated",
-          payload: updated,
-        });
+        // Update local state
+        setMessages(prev => prev.map(m => m.id === messageId ? { ...m, isDeleted: true, content: language === 'id' ? 'Pesan telah dihapus' : 'Message deleted' } : m));
       }
-    } catch {
-      addToast('Error', 'error');
+    } catch (err) {
+      console.error(err);
     }
     setContextMenu(null);
   };
@@ -610,6 +715,20 @@ export default function ChatPage() {
         const msg = payload.payload as ChatMessage;
         setMessages((prev) => prev.map((m) => (m.id === msg.id ? msg : m)));
       })
+      .on("broadcast", { event: "typing" }, (payload) => {
+        const { user } = payload.payload;
+        if (user.id === currentUser?.id) return;
+        
+        setTypingUsers((prev) => {
+          if (prev.some(u => u.id === user.id)) return prev;
+          return [...prev, user];
+        });
+        
+        // Remove after 3 seconds of no typing event
+        setTimeout(() => {
+          setTypingUsers((prev) => prev.filter(u => u.id !== user.id));
+        }, 3000);
+      })
       .subscribe((status) => {
         setIsConnected(status === "SUBSCRIBED");
       });
@@ -617,7 +736,26 @@ export default function ChatPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedRoom]);
+  }, [selectedRoom, currentUser]);
+
+  // ── Typing Indicator Broadcast ──────────────────────────────────────────
+  useEffect(() => {
+    if (!selectedRoom || !session || !currentUser || !newMessage.trim()) return;
+
+    if (typingTimeoutRef) clearTimeout(typingTimeoutRef);
+
+    const timeout = setTimeout(() => {
+      const channel = supabase.channel(`room:${selectedRoom.id}`);
+      channel.send({
+        type: "broadcast",
+        event: "typing",
+        payload: { user: { id: currentUser.id, name: currentUser.name, image: currentUser.photoUrl } }
+      });
+    }, 500);
+
+    setTypingTimeoutRef(timeout);
+    return () => clearTimeout(timeout);
+  }, [newMessage, selectedRoom, currentUser]);
 
   // ── Admin Actions & Member List ───────────────────────────────────────────
   const fetchRoomMembers = useCallback(async (roomId: string) => {
@@ -815,6 +953,11 @@ export default function ChatPage() {
     }
   });
 
+  const handleRoomSelect = (room: ChatRoom) => {
+    setSelectedRoom(room);
+    if (window.innerWidth < 768) setShowSidebar(false);
+  };
+
   return (
     <div className="pt-16 h-screen bg-[#FAFAFA] dark:bg-zinc-950 flex overflow-hidden">
       {/* ── Left Sidebar: Room List ────────────────────────────────────────── */}
@@ -872,6 +1015,7 @@ export default function ChatPage() {
                     TERPUTUS
                   </>
                 )
+              ) : (
                 <>
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                   CONNECTED
@@ -898,38 +1042,55 @@ export default function ChatPage() {
                   </button>
                 </div>
               ) : (
-                rooms.map((room) => (
-                  <button
-                    key={room.id}
-                    onClick={() => {
-                      setSelectedRoom(room);
-                      if (window.innerWidth < 768) setShowSidebar(false);
-                    }}
-                    className={cn(
-                      "w-full text-left px-3 py-3 rounded-xl transition-all flex items-center gap-3 group",
-                      selectedRoom?.id === room.id
-                        ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
-                        : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                      selectedRoom?.id === room.id
-                        ? "bg-indigo-600 text-white"
-                        : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700"
-                    )}>
-                      <Hash size={16} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-sm truncate">{room.name}</div>
-                      {room._count && (
-                        <div className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">
-                          {room._count.members} {t.members}
+                [...rooms]
+                  .sort((a, b) => {
+                    const aPinned = a.members?.some((m: any) => m.userId === currentUser?.id && m.isPinned) ? 1 : 0;
+                    const bPinned = b.members?.some((m: any) => m.userId === currentUser?.id && m.isPinned) ? 1 : 0;
+                    return bPinned - aPinned;
+                  })
+                  .map((room) => {
+                    const isSelected = selectedRoom?.id === room.id;
+                    const isPinned = room.members?.some((m: any) => m.userId === currentUser?.id && m.isPinned);
+                    return (
+                      <button
+                        key={room.id}
+                        onClick={() => handleRoomSelect(room)}
+                        className={cn(
+                          "w-full flex items-center gap-3 p-3 rounded-2xl transition-all duration-200 group relative",
+                          isSelected
+                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
+                            : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110",
+                          isSelected ? "bg-white/20" : "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500"
+                        )}>
+                          <Hash size={20} />
                         </div>
-                      )}
-                    </div>
-                  </button>
-                ))
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="font-bold text-sm truncate">{room.name}</div>
+                            {isPinned && <Pin size={12} className={cn(isSelected ? "text-white/70" : "text-indigo-400")} />}
+                          </div>
+                          {room._count && (
+                            <div className={cn("text-[10px] mt-0.5", isSelected ? "text-white/60" : "text-zinc-400 dark:text-zinc-500")}>
+                              {room._count.members} {t.members}
+                            </div>
+                          )}
+                        </div>
+                        {/* Pin Toggle Button */}
+                        {!isSelected && (
+                          <div 
+                            onClick={(e) => { e.stopPropagation(); handlePinRoom(room.id, !isPinned); }}
+                            className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-opacity"
+                          >
+                            {isPinned ? <PinOff size={11} /> : <Pin size={11} />}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })
               )}
             </div>
           </motion.aside>
@@ -967,11 +1128,44 @@ export default function ChatPage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-zinc-900 dark:text-white text-sm">{selectedRoom.name}</h3>
-                  {selectedRoom.description && (
-                    <p className="text-[11px] text-zinc-400 dark:text-zinc-500 truncate max-w-[200px]">
-                      {selectedRoom.description}
-                    </p>
-                  )}
+                  <div className="flex items-center gap-2 overflow-hidden h-4">
+                    <AnimatePresence mode="wait">
+                      {typingUsers.length > 0 ? (
+                        <motion.div
+                          key="typing"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="flex items-center gap-1.5"
+                        >
+                          <div className="flex -space-x-1.5 overflow-hidden">
+                            {typingUsers.map(user => (
+                              <img 
+                                key={user.id} 
+                                src={user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} 
+                                className="w-3.5 h-3.5 rounded-full border border-white dark:border-zinc-950 object-cover" 
+                                alt={user.name} 
+                              />
+                            ))}
+                          </div>
+                          <p className="text-[10px] font-bold text-indigo-500 animate-pulse uppercase tracking-wider">
+                            {typingUsers.length === 1 
+                              ? `${typingUsers[0].name.split(' ')[0]} ${language === 'id' ? 'sedang mengetik...' : 'is typing...'}`
+                              : `${typingUsers.length} ${language === 'id' ? 'orang mengetik...' : 'people typing...'}`}
+                          </p>
+                        </motion.div>
+                      ) : selectedRoom.description ? (
+                        <motion.p 
+                          key="desc"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="text-[11px] text-zinc-400 dark:text-zinc-500 truncate max-w-[200px]"
+                        >
+                          {selectedRoom.description}
+                        </motion.p>
+                      ) : null}
+                    </AnimatePresence>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -1046,8 +1240,41 @@ export default function ChatPage() {
             </div>
 
             {/* Messages + Online Users */}
-            <div className="flex-1 flex overflow-hidden">
-              {/* Message Feed */}
+            <div className="flex-1 flex flex-col overflow-hidden relative">
+              {/* Media Pin Header */}
+              <AnimatePresence>
+                {latestMedia && (
+                  <motion.div
+                    initial={{ y: -20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -20, opacity: 0 }}
+                    onClick={() => scrollToMessage(latestMedia.id)}
+                    className="absolute top-0 inset-x-0 z-20 bg-white/90 dark:bg-zinc-900/90 backdrop-blur border-b border-zinc-100 dark:border-zinc-800 px-4 py-2 flex items-center justify-between cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors shadow-sm"
+                  >
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-500 shrink-0">
+                        {latestMedia.type === 'image' && <ImageIcon size={14} />}
+                        {latestMedia.type === 'location' && <MapPin size={14} />}
+                        {latestMedia.type === 'poll' && <BarChart2 size={14} />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+                          {latestMedia.type === 'image' ? (language === 'id' ? 'FOTO TERBARU' : 'LATEST PHOTO') : 
+                           latestMedia.type === 'location' ? (language === 'id' ? 'LOKASI TERBARU' : 'LATEST LOCATION') : 
+                           (language === 'id' ? 'POLLING TERBARU' : 'LATEST POLL')}
+                        </p>
+                        <p className="text-xs text-zinc-500 truncate">
+                          {latestMedia.type === 'poll' ? latestMedia.content : (latestMedia.mediaUrl || (language === 'id' ? 'Ketuk untuk melihat' : 'Tap to view'))}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight size={14} className="text-zinc-400 shrink-0" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="flex-1 flex overflow-hidden">
+                {/* Message Feed */}
               <div
                 ref={chatContainerRef}
                 onScroll={handleScroll}
@@ -1102,12 +1329,13 @@ export default function ChatPage() {
                         return (
                           <motion.div
                             key={msg.id}
+                            id={`msg-${msg.id}`}
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.15 }}
                             className={cn(
                               "flex gap-2.5 group",
-                              showAvatar ? "mt-3" : "mt-0.5",
+                              showAvatar ? "mt-1.5" : "mt-0.5",
                               isOwn ? "flex-row-reverse" : ""
                             )}
                           >
@@ -1124,7 +1352,7 @@ export default function ChatPage() {
                             {/* Message bubble */}
                             <div className={cn("max-w-[70%] min-w-0", isOwn ? "items-end" : "items-start")}>
                               {showAvatar && (
-                                <div className={cn("flex items-center gap-2 mb-0.5", isOwn ? "flex-row-reverse" : "")}>
+                                <div className={cn("flex items-center gap-2", isOwn ? "flex-row-reverse" : "")}>
                                   <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
                                     {msg.sender.name || "User"}
                                   </span>
@@ -1170,7 +1398,7 @@ export default function ChatPage() {
                                   </div>
                                 ) : msg.type === "poll" ? (
                                   (() => {
-                                    const poll = polls.find(p => p.id === msg.content);
+                                    const poll = polls.find(p => p.id === msg.mediaUrl);
                                     if (!poll) return <div className="text-sm italic text-zinc-500 px-3 py-2">Poll not found</div>;
                                     return (
                                       <div className={cn("p-4 rounded-2xl w-64", isOwn ? "bg-indigo-600 text-white rounded-tr-md" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-tl-md")}>
@@ -1445,6 +1673,7 @@ export default function ChatPage() {
                 </div>
               </div>
             )}
+          </div>
           </>
         ) : (
           /* No room selected */

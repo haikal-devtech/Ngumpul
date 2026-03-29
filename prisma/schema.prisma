@@ -152,6 +152,7 @@ model ChatPoll {
   question    String
   options     String[]
   createdById String
+  isFinalized Boolean @default(false)
   createdAt   DateTime       @default(now())
   createdBy   User           @relation(fields: [createdById], references: [id], onDelete: Cascade)
   room        ChatRoom       @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -189,7 +190,8 @@ model ChatMember {
   id       String   @id @default(cuid())
   roomId   String
   userId   String
-  role     String   @default("member")
+   role     String   @default("member")
+  isPinned Boolean  @default(false)
   joinedAt DateTime @default(now())
   room     ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
