@@ -111,10 +111,23 @@ export default function TeamsPage() {
 
   const handleCopyInvite = () => {
     const link = `${window.location.origin}/teams/join?team=${currentTeam?.id}`;
-    navigator.clipboard.writeText(link).then(() => {
+    const copyToClipboard = async () => {
+      try {
+        await navigator.clipboard.writeText(link);
+      } catch {
+        const textarea = document.createElement("textarea");
+        textarea.value = link;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
       setInviteCopied(true);
       setTimeout(() => setInviteCopied(false), 2500);
-    });
+    };
+    copyToClipboard();
   };
 
   const t = {
@@ -133,6 +146,14 @@ export default function TeamsPage() {
   };
 
   const handleCreateTeam = (team: Team) => {
+    if (team.members.length === 0 && currentUser) {
+      team.members = [{
+        id: currentUser.id,
+        name: currentUser.name,
+        role: "admin" as const,
+        photoUrl: currentUser.photoUrl,
+      }];
+    }
     setTeams((prev) => [team, ...prev]);
     setCurrentTeam(team);
     setShowCreate(false);
