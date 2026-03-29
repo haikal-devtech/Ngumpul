@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAppContext } from "@/components/AppContext";
 
-export default function JoinTeamPage() {
+function JoinTeamContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const teamId = searchParams.get("team");
@@ -131,5 +131,17 @@ export default function JoinTeamPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function JoinTeamPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">
+        <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+      </div>
+    }>
+      <JoinTeamContent />
+    </Suspense>
   );
 }
