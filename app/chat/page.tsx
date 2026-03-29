@@ -66,6 +66,8 @@ export default function ChatPage() {
   const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
   const [sendingLocation, setSendingLocation] = useState(false);
   const [polls, setPolls] = useState<any[]>([]);
+  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
+  const [editContent, setEditContent] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -229,7 +231,7 @@ export default function ChatPage() {
 
 
   // ── Send message ──────────────────────────────────────────────────────────
-  const sendMessage = async (overrideType?: 'text'|'image'|'sticker'|'emote', overrideContent?: string, mediaUrl?: string) => {
+  const sendMessage = async (overrideType?: 'text'|'image'|'sticker'|'emote'|'poll'|'location', overrideContent?: string, mediaUrl?: string) => {
     if (!session || !currentUser) {
       setShowLoginGate(true);
       return;
@@ -404,6 +406,58 @@ export default function ChatPage() {
     setContextMenu(null);
   };
 
+  // ── Message Actions: Edit & Delete ───────────────────────────────────────
+  const handleEditMessage = async () => {
+    if (!editingMessage || !editContent.trim()) return;
+    try {
+      const res = await fetch(`/api/chat/messages/${editingMessage.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: editContent.trim() }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+        setEditingMessage(null);
+        setEditContent("");
+        addToast(language === 'id' ? 'Pesan diperbarui' : 'Message updated', 'success');
+        
+        // Broadcast update
+        supabase.channel(`room:${selectedRoom!.id}`).send({
+          type: "broadcast",
+          event: "message_updated",
+          payload: updated,
+        });
+      }
+    } catch {
+      addToast('Error', 'error');
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!window.confirm(language === 'id' ? 'Hapus pesan ini?' : 'Delete this message?')) return;
+    try {
+      const res = await fetch(`/api/chat/messages/${messageId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+        addToast(language === 'id' ? 'Pesan dihapus' : 'Message deleted', 'success');
+        
+        // Broadcast update
+        supabase.channel(`room:${selectedRoom!.id}`).send({
+          type: "broadcast",
+          event: "message_updated",
+          payload: updated,
+        });
+      }
+    } catch {
+      addToast('Error', 'error');
+    }
+    setContextMenu(null);
+  };
+
   // ── Blocked Users ────────────────────────────────────────────────────────
   const fetchBlockedUsers = useCallback(async () => {
     setLoadingBlocked(true);
@@ -549,6 +603,10 @@ export default function ChatPage() {
           
           return [...prev, msg];
         });
+      })
+      .on("broadcast", { event: "message_updated" }, (payload) => {
+        const msg = payload.payload as ChatMessage;
+        setMessages((prev) => prev.map((m) => (m.id === msg.id ? msg : m)));
       })
       .subscribe((status) => {
         setIsConnected(status === "SUBSCRIBED");
@@ -1051,7 +1109,12 @@ export default function ChatPage() {
                                   <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
                                     {msg.sender.name || "User"}
                                   </span>
-                                  <span className="text-[10px] text-zinc-400">{formatTime(msg.createdAt)}</span>
+                                  <span className="text-[10px] text-zinc-400">
+                                    {formatTime(msg.createdAt)}
+                                    {msg.updatedAt && msg.updatedAt !== msg.createdAt && !msg.isDeleted && (
+                                      <span className="ml-1 italic opacity-70">({language === 'id' ? 'diedit' : 'edited'})</span>
+                                    )}
+                                  </span>
                                 </div>
                               )}
                               <div className="relative">
@@ -1063,8 +1126,9 @@ export default function ChatPage() {
                                     <img 
                                       src={msg.mediaUrl} 
                                       alt="Chat Attachment" 
-                                      className="max-w-full sm:max-w-xs h-auto max-h-64 object-cover rounded-xl"
+                                      className="max-w-full sm:max-w-xs h-auto max-h-64 object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
                                       loading="lazy"
+                                      onClick={() => setLightboxImage(msg.mediaUrl!)}
                                     />
                                     {msg.content !== "Image" && (
                                       <p className={cn("px-2 py-1.5 text-sm", isOwn ? "text-white" : "text-zinc-900 dark:text-锌-100")}>
@@ -1397,20 +1461,45 @@ export default function ChatPage() {
             className="fixed z-50 bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-800 py-1 min-w-[160px]"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              onClick={() => reportMessage(contextMenu.message.id)}
-              className="w-full text-left px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-2.5 transition-colors"
-            >
-              <Flag size={14} className="text-amber-500" />
-              {t.report}
-            </button>
-            <button
-              onClick={() => blockUser(contextMenu.message.senderId)}
-              className="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2.5 transition-colors"
-            >
-              <Ban size={14} />
-              {t.block}
-            </button>
+            {session && currentUser?.id === contextMenu.message.senderId ? (
+              <>
+                <button
+                  onClick={() => {
+                    setEditingMessage(contextMenu.message);
+                    setEditContent(contextMenu.message.content);
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-2.5 transition-colors"
+                >
+                  <Pickaxe size={14} className="text-indigo-500" />
+                  {language === 'id' ? 'Edit Pesan' : 'Edit Message'}
+                </button>
+                <button
+                  onClick={() => handleDeleteMessage(contextMenu.message.id)}
+                  className="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2.5 transition-colors"
+                >
+                  <Ban size={14} />
+                  {language === 'id' ? 'Hapus Pesan' : 'Delete Message'}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => reportMessage(contextMenu.message.id)}
+                  className="w-full text-left px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-2.5 transition-colors"
+                >
+                  <Flag size={14} className="text-amber-500" />
+                  {t.report}
+                </button>
+                <button
+                  onClick={() => blockUser(contextMenu.message.senderId)}
+                  className="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2.5 transition-colors"
+                >
+                  <Ban size={14} />
+                  {t.block}
+                </button>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -1862,6 +1951,65 @@ export default function ChatPage() {
                     {t.deleteRoom}
                   </button>
                 )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Edit Message Modal ──────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {editingMessage && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setEditingMessage(null)}
+              className="fixed inset-0 z-[60] bg-black/30 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed z-[70] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm"
+            >
+              <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-6 mx-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                    <Pickaxe size={18} className="text-indigo-500" />
+                    {language === 'id' ? 'Edit Pesan' : 'Edit Message'}
+                  </h3>
+                  <button
+                    onClick={() => setEditingMessage(null)}
+                    className="w-8 h-8 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all min-h-[100px] resize-none"
+                    autoFocus
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setEditingMessage(null)}
+                      className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                    >
+                      {t.cancel}
+                    </button>
+                    <button
+                      onClick={handleEditMessage}
+                      disabled={!editContent.trim() || editContent === editingMessage.content}
+                      className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                    >
+                      {language === 'id' ? 'Simpan' : 'Save'}
+                    </button>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </>

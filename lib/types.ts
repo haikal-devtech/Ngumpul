@@ -81,10 +81,11 @@ export interface ChatMessage {
   roomId: string;
   senderId: string;
   content: string;
-  type: 'text' | 'image' | 'sticker' | 'emote';
+  type: 'text' | 'image' | 'sticker' | 'emote' | 'poll' | 'location';
   mediaUrl?: string | null;
   isDeleted: boolean;
   createdAt: string;
+  updatedAt: string;
   sender: { id: string; name: string | null; image: string | null };
 }
 

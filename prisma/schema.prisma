@@ -195,6 +195,7 @@ model ChatMessage {
   mediaUrl  String?
   isDeleted Boolean  @default(false)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   room    ChatRoom          @relation(fields: [roomId], references: [id], onDelete: Cascade)
   sender  User              @relation(fields: [senderId], references: [id], onDelete: Cascade)
