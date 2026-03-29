@@ -34,6 +34,7 @@ export interface Team {
   events?: NgumpulEvent[];
   color?: string;
   createdAt: string;
+  inviteCode: string;
 }
 
 

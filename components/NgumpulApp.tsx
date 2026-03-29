@@ -2267,6 +2267,7 @@ const CreateTeam = ({ onCreated, onCancel, language }: { onCreated: (team: Team)
       members: [], // Just the creator initially
       color: colors[Math.floor(Math.random() * colors.length)],
       createdAt: new Date().toISOString(),
+      inviteCode: Math.random().toString(36).substr(2, 12),
     };
     onCreated(newTeam);
   };

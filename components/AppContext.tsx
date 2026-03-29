@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { UserProfile, NgumpulEvent, Team, Toast } from '../lib/types';
 import { startOfDay, parseISO } from 'date-fns';
 
@@ -19,6 +19,7 @@ type AppContextType = {
   setTeams: React.Dispatch<React.SetStateAction<Team[]>>;
   currentTeam: Team | null;
   setCurrentTeam: (team: Team | null) => void;
+  findTeamByInviteCode: (code: string) => Team | undefined;
   addToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   toasts: Toast[];
   requestNotificationPermission: () => Promise<boolean>;
@@ -59,24 +60,25 @@ function deduped<T extends { id: string }>(items: T[]): T[] {
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [language, setLanguage] = useState<'en' | 'id'>('id');
-  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
-    loadFromStorage<'light' | 'dark'>('ngumpul_theme', 'light')
-  );
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   // Initialise from localStorage so state survives page navigation
-  const [myEvents, setMyEventsRaw] = useState<NgumpulEvent[]>(() =>
-    loadFromStorage<NgumpulEvent[]>('ngumpul_myEvents', [])
-  );
-  const [joinedEvents, setJoinedEventsRaw] = useState<NgumpulEvent[]>(() =>
-    loadFromStorage<NgumpulEvent[]>('ngumpul_joinedEvents', [])
-  );
-  const [teams, setTeamsRaw] = useState<Team[]>(() =>
-    loadFromStorage<Team[]>('ngumpul_teams', [])
-  );
-  const [currentTeam, setCurrentTeamRaw] = useState<Team | null>(() =>
-    loadFromStorage<Team | null>('ngumpul_currentTeam', null)
-  );
+  const [myEvents, setMyEventsRaw] = useState<NgumpulEvent[]>([]);
+  const [joinedEvents, setJoinedEventsRaw] = useState<NgumpulEvent[]>([]);
+  const [teams, setTeamsRaw] = useState<Team[]>([]);
+  const [currentTeam, setCurrentTeamRaw] = useState<Team | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Hydrate from localStorage on mount (client-side only)
+  useEffect(() => {
+    setTheme(loadFromStorage('ngumpul_theme', 'light'));
+    setMyEventsRaw(loadFromStorage<NgumpulEvent[]>('ngumpul_myEvents', []));
+    setJoinedEventsRaw(loadFromStorage<NgumpulEvent[]>('ngumpul_joinedEvents', []));
+    setTeamsRaw(loadFromStorage<Team[]>('ngumpul_teams', []));
+    setCurrentTeamRaw(loadFromStorage<Team | null>('ngumpul_currentTeam', null));
+    setHydrated(true);
+  }, []);
 
   const addToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     const id = Math.random().toString(36).substr(2, 9);
@@ -119,6 +121,49 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     saveToStorage('ngumpul_currentTeam', team);
   }, []);
 
+  // ── Sync currentTeam when teams array changes ─────────────────────────────
+  // This ensures that when a member joins via the join page and updates the
+  // teams array, the currentTeam view also reflects the updated member list.
+  useEffect(() => {
+    if (!hydrated) return;
+    setCurrentTeamRaw(prev => {
+      if (!prev) return null;
+      const updated = teams.find(t => t.id === prev.id);
+      if (!updated) return null;
+      // Only update if members actually changed (avoid infinite loops)
+      if (JSON.stringify(updated.members) === JSON.stringify(prev.members) &&
+          updated.name === prev.name) {
+        return prev;
+      }
+      saveToStorage('ngumpul_currentTeam', updated);
+      return updated;
+    });
+  }, [teams, hydrated]);
+
+  // ── Cross-tab localStorage sync ───────────────────────────────────────────
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'ngumpul_teams' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue) as Team[];
+          setTeamsRaw(deduped(parsed));
+        } catch {}
+      }
+      if (e.key === 'ngumpul_currentTeam' && e.newValue) {
+        try {
+          setCurrentTeamRaw(JSON.parse(e.newValue));
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  // ── Find team by invite code ──────────────────────────────────────────────
+  const findTeamByInviteCode = useCallback((code: string): Team | undefined => {
+    return teams.find(t => t.inviteCode === code);
+  }, [teams]);
+
   // ── Load language preference ───────────────────────────────────────────────
   useEffect(() => {
     const lang = localStorage.getItem('ngumpul_lang');
@@ -126,11 +171,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // ── Theme ──────────────────────────────────────────────────────────────────
-  // Apply persisted theme on mount
   useEffect(() => {
     if (theme === 'dark') document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
-  }, []);
+  }, [theme]);
 
   const toggleTheme = () => {
     setTheme(prev => {
@@ -169,6 +213,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Event Reminders ───────────────────────────────────────────────────────
   useEffect(() => {
+    if (!hydrated) return;
     const checkReminders = () => {
       if (!("Notification" in window) || Notification.permission !== "granted") return;
       
@@ -178,7 +223,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       allEvents.forEach(event => {
         if (event.status === 'cancelled') return;
         
-        // Find if any confirmed slot is today
         const isToday = event.confirmedSlot && startOfDay(parseISO(event.confirmedSlot)).getTime() === today.getTime();
 
         if (isToday) {
@@ -194,11 +238,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     };
 
-    // Check on mount and every hour
     checkReminders();
     const interval = setInterval(checkReminders, 3600000);
     return () => clearInterval(interval);
-  }, [myEvents, joinedEvents, language]);
+  }, [myEvents, joinedEvents, language, hydrated]);
 
   return (
     <AppContext.Provider value={{
@@ -209,6 +252,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       joinedEvents, setJoinedEvents,
       teams, setTeams,
       currentTeam, setCurrentTeam,
+      findTeamByInviteCode,
       toasts, addToast,
       requestNotificationPermission,
       requestLocationPermission,

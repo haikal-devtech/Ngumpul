@@ -1,13 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Plus, ChevronRight, Star, Crown, Calendar, Hash, Trash2, Clock } from "lucide-react";
+import { Users, Plus, ChevronRight, Crown, Calendar, Clock, Link2, Share2 } from "lucide-react";
 import { useAppContext } from "@/components/AppContext";
 import { Team } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "motion/react";
+
+// --- Helpers ---
+function generateId() {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+function generateInviteCode() {
+  return Math.random().toString(36).substr(2, 12);
+}
+
+function encodeTeamForUrl(team: { id: string; name: string; description?: string; inviteCode: string }) {
+  const data = JSON.stringify({
+    id: team.id,
+    name: team.name,
+    desc: team.description || "",
+    code: team.inviteCode,
+  });
+  return btoa(unescape(encodeURIComponent(data)));
+}
+
+function decodeTeamFromUrl(hash: string): { id: string; name: string; desc: string; code: string } | null {
+  try {
+    const decoded = decodeURIComponent(escape(atob(hash)));
+    const data = JSON.parse(decoded);
+    if (data.id && data.name && data.code) return data;
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 // --- CreateTeam Mini-Component ---
 function CreateTeamModal({ onCreated, onCancel, language }: { onCreated: (team: Team) => void; onCancel: () => void; language: "en" | "id" }) {
@@ -29,17 +58,18 @@ function CreateTeamModal({ onCreated, onCancel, language }: { onCreated: (team: 
     e.preventDefault();
     if (!name.trim()) return;
     const team: Team = {
-      id: Math.random().toString(36).substr(2, 9),
-      name,
-      description: desc,
+      id: generateId(),
+      name: name.trim(),
+      description: desc.trim(),
       members: currentUser ? [{
         id: currentUser.id,
         name: currentUser.name,
         role: "admin" as const,
-        photoUrl: currentUser.photoUrl
+        photoUrl: currentUser.photoUrl,
       }] : [],
       events: [],
       createdAt: new Date().toISOString(),
+      inviteCode: generateInviteCode(),
     };
     onCreated(team);
   };
@@ -105,12 +135,25 @@ function CreateTeamModal({ onCreated, onCancel, language }: { onCreated: (team: 
 // --- Main Teams Page ---
 export default function TeamsPage() {
   const router = useRouter();
-  const { language, currentUser, teams, setTeams, currentTeam, setCurrentTeam, myEvents } = useAppContext();
+  const { language, currentUser, teams, setTeams, currentTeam, setCurrentTeam, myEvents, addToast } = useAppContext();
   const [showCreate, setShowCreate] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
 
+  // Keep currentTeam synced with teams array
+  useEffect(() => {
+    if (currentTeam) {
+      const updated = teams.find(t => t.id === currentTeam.id);
+      if (updated && updated !== currentTeam) {
+        setCurrentTeam(updated);
+      }
+    }
+  }, [teams, currentTeam, setCurrentTeam]);
+
   const handleCopyInvite = () => {
-    const link = `${window.location.origin}/teams/join?team=${currentTeam?.id}`;
+    if (!currentTeam) return;
+    const hash = encodeTeamForUrl(currentTeam);
+    const link = `${window.location.origin}/teams/join#${hash}`;
+
     const copyToClipboard = async () => {
       try {
         await navigator.clipboard.writeText(link);
@@ -125,6 +168,7 @@ export default function TeamsPage() {
         document.body.removeChild(textarea);
       }
       setInviteCopied(true);
+      addToast(language === 'id' ? 'Tautan undangan disalin!' : 'Invite link copied!', 'success');
       setTimeout(() => setInviteCopied(false), 2500);
     };
     copyToClipboard();
@@ -143,6 +187,11 @@ export default function TeamsPage() {
     admin: language === "id" ? "Admin" : "Admin",
     member: language === "id" ? "Anggota" : "Member",
     created: language === "id" ? "Dibuat" : "Created",
+    inviteMembers: language === "id" ? "Undang Anggota" : "Invite Members",
+    linkCopied: language === "id" ? "✓ Tautan Disalin!" : "✓ Link Copied!",
+    newEvent: language === "id" ? "+ Acara Baru" : "+ New Event",
+    removeMember: language === "id" ? "Hapus" : "Remove",
+    leaveTeam: language === "id" ? "Keluar dari Tim" : "Leave Team",
   };
 
   const handleCreateTeam = (team: Team) => {
@@ -157,6 +206,22 @@ export default function TeamsPage() {
     setTeams((prev) => [team, ...prev]);
     setCurrentTeam(team);
     setShowCreate(false);
+    addToast(language === 'id' ? 'Tim berhasil dibuat!' : 'Team created successfully!', 'success');
+  };
+
+  const handleLeaveTeam = () => {
+    if (!currentTeam || !currentUser) return;
+    const isAdmin = currentTeam.members.some(m => m.id === currentUser.id && m.role === "admin");
+    const updatedTeams = teams.map(t => {
+      if (t.id !== currentTeam.id) return t;
+      const updatedMembers = t.members.filter(m => m.id !== currentUser.id);
+      // If no members left, remove the team
+      if (updatedMembers.length === 0) return null;
+      return { ...t, members: updatedMembers };
+    }).filter(Boolean) as Team[];
+    setTeams(updatedTeams);
+    setCurrentTeam(null);
+    addToast(language === 'id' ? 'Berhasil keluar dari tim' : 'Successfully left the team', 'success');
   };
 
   // --- Team Workspace View ---
@@ -209,9 +274,10 @@ export default function TeamsPage() {
                  whileHover={{ scale: 1.05 }}
                  whileTap={{ scale: 0.95 }}
                  onClick={handleCopyInvite}
-                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${inviteCopied ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${inviteCopied ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
                >
-                 {inviteCopied ? (language === 'id' ? '✓ Tautan Disalin!' : '✓ Link Copied!') : (language === 'id' ? 'Undang Anggota' : 'Invite Members')}
+                 <Link2 size={12} />
+                 {inviteCopied ? t.linkCopied : t.inviteMembers}
                </motion.button>
                <motion.button
                  whileHover={{ scale: 1.05 }}
@@ -219,7 +285,7 @@ export default function TeamsPage() {
                  className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition"
                  onClick={() => router.push(`/event/new?teamId=${currentTeam.id}`)}
                >
-                 {language === 'id' ? '+ Acara Baru' : '+ New Event'}
+                 {t.newEvent}
                </motion.button>
             </div>
           </motion.div>
@@ -239,6 +305,9 @@ export default function TeamsPage() {
                     <img src={member.photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.name}`} alt={member.name} className="w-8 h-8 rounded-full object-cover" />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{member.name}</div>
+                      <div className="text-xs text-zinc-400 dark:text-zinc-500">
+                        {member.role === "admin" ? t.admin : t.member}
+                      </div>
                     </div>
                     {member.role === "admin" && (
                       <Crown size={14} className="text-amber-500 shrink-0" />
@@ -259,6 +328,18 @@ export default function TeamsPage() {
               </div>
               <div className="text-xs font-bold text-violet-400 uppercase tracking-wider">{t.events}</div>
             </div>
+
+            {/* Leave team button */}
+            {currentUser && currentTeam.members.length > 1 && (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleLeaveTeam}
+                className="w-full py-2.5 rounded-xl border border-red-200 dark:border-red-800/50 text-red-500 dark:text-red-400 text-xs font-bold hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+              >
+                {t.leaveTeam}
+              </motion.button>
+            )}
           </div>
 
           {/* Events */}

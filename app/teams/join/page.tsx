@@ -1,56 +1,112 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useAppContext } from "@/components/AppContext";
+import { Team } from "@/lib/types";
+
+function decodeTeamFromHash(hash: string): { id: string; name: string; desc: string; code: string } | null {
+  try {
+    const decoded = decodeURIComponent(escape(atob(hash)));
+    const data = JSON.parse(decoded);
+    if (data.id && data.name && data.code) return data;
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 function JoinTeamContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const teamId = searchParams.get("team");
-  const { currentUser, teams, setTeams, setCurrentTeam, language } = useAppContext();
-  const [status, setStatus] = useState<"loading" | "success" | "error" | "not-found">("loading");
+  const { currentUser, teams, setTeams, setCurrentTeam, language, addToast } = useAppContext();
+  const [status, setStatus] = useState<"loading" | "joining" | "success" | "error" | "not-found">("loading");
+  const [teamName, setTeamName] = useState("");
+  const processed = useRef(false);
 
   const t = {
+    loading: language === "id" ? "Memuat..." : "Loading...",
     joining: language === "id" ? "Bergabung dengan tim..." : "Joining team...",
+    joiningTeam: language === "id" ? "Bergabung dengan" : "Joining",
     success: language === "id" ? "Berhasil bergabung!" : "Successfully joined!",
-    error: language === "id" ? "Gagal bergabung dengan tim" : "Failed to join team",
-    notFound: language === "id" ? "Tim tidak ditemukan" : "Team not found",
-    redirecting: language === "id" ? "Mengalihkan..." : "Redirecting...",
-    pleaseLogin: language === "id" ? "Silakan masuk untuk bergabung dengan tim" : "Please sign in to join the team",
+    alreadyMember: language === "id" ? "Kamu sudah jadi anggota tim ini" : "You're already a member of this team",
+    notFound: language === "id" ? "Tautan undangan tidak valid" : "Invalid invite link",
+    notFoundDesc: language === "id" ? "Tautan ini mungkin sudah kedaluwarsa atau tidak valid." : "This link may be expired or invalid.",
+    redirecting: language === "id" ? "Mengalihkan ke tim..." : "Redirecting to team...",
+    pleaseLogin: language === "id" ? "Masuk untuk bergabung dengan tim" : "Sign in to join this team",
+    pleaseLoginDesc: language === "id" ? "Kamu perlu masuk untuk bergabung dengan tim ini." : "You need to sign in to join this team.",
     goToLogin: language === "id" ? "Masuk" : "Sign In",
     backToTeams: language === "id" ? "Kembali ke Tim" : "Back to Teams",
   };
 
   useEffect(() => {
-    if (!teamId) {
+    if (processed.current) return;
+    processed.current = true;
+
+    // Read team data from URL hash
+    const hash = window.location.hash.slice(1); // Remove the # prefix
+    if (!hash) {
       setStatus("not-found");
       return;
     }
 
-    const team = teams.find((t) => t.id === teamId);
-    if (!team) {
+    const teamData = decodeTeamFromHash(hash);
+    if (!teamData) {
       setStatus("not-found");
       return;
     }
 
+    setTeamName(teamData.name);
+
+    // Check if user is logged in
     if (!currentUser) {
       setStatus("error");
       return;
     }
 
-    const alreadyMember = team.members.some((m) => m.id === currentUser.id);
-    if (alreadyMember) {
+    setStatus("joining");
+
+    // Check if team already exists in local storage
+    const existingTeam = teams.find(t => t.id === teamData.id || t.inviteCode === teamData.code);
+
+    if (existingTeam) {
+      // Check if user is already a member
+      const alreadyMember = existingTeam.members.some(m => m.id === currentUser.id);
+      if (alreadyMember) {
+        setStatus("success");
+        setCurrentTeam(existingTeam);
+        addToast(t.alreadyMember, "info");
+        setTimeout(() => router.push("/teams"), 1500);
+        return;
+      }
+
+      // Add user to existing team
+      const updatedTeam: Team = {
+        ...existingTeam,
+        members: [
+          ...existingTeam.members,
+          {
+            id: currentUser.id,
+            name: currentUser.name,
+            role: "member" as const,
+            photoUrl: currentUser.photoUrl,
+          },
+        ],
+      };
+
+      setTeams(prev => prev.map(t => (t.id === existingTeam.id ? updatedTeam : t)));
+      setCurrentTeam(updatedTeam);
       setStatus("success");
-      setCurrentTeam(team);
-      setTimeout(() => router.push("/teams"), 1000);
+      addToast(language === 'id' ? `Bergabung dengan ${teamData.name}!` : `Joined ${teamData.name}!`, 'success');
+      setTimeout(() => router.push("/teams"), 1500);
       return;
     }
 
-    const updatedTeam = {
-      ...team,
+    // Team doesn't exist locally — create it from the invite data
+    const newTeam: Team = {
+      id: teamData.id,
+      name: teamData.name,
+      description: teamData.desc || undefined,
       members: [
-        ...team.members,
         {
           id: currentUser.id,
           name: currentUser.name,
@@ -58,13 +114,17 @@ function JoinTeamContent() {
           photoUrl: currentUser.photoUrl,
         },
       ],
+      events: [],
+      createdAt: new Date().toISOString(),
+      inviteCode: teamData.code,
     };
 
-    setTeams((prev) => prev.map((t) => (t.id === teamId ? updatedTeam : t)));
-    setCurrentTeam(updatedTeam);
+    setTeams(prev => [newTeam, ...prev]);
+    setCurrentTeam(newTeam);
     setStatus("success");
-    setTimeout(() => router.push("/teams"), 1000);
-  }, [teamId, currentUser, teams, setTeams, setCurrentTeam, router]);
+    addToast(language === 'id' ? `Bergabung dengan ${teamData.name}!` : `Joined ${teamData.name}!`, 'success');
+    setTimeout(() => router.push("/teams"), 1500);
+  }, [currentUser, teams, setTeams, setCurrentTeam, router, language, addToast, t.alreadyMember]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900 flex items-center justify-center px-4">
@@ -73,10 +133,12 @@ function JoinTeamContent() {
 
       <div className="relative w-full max-w-md">
         <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl shadow-zinc-100 dark:shadow-black/30 p-8 sm:p-10 text-center">
-          {status === "loading" && (
+          {(status === "loading" || status === "joining") && (
             <>
               <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-white">{t.joining}</h2>
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-1">
+                {status === "loading" ? t.loading : `${t.joiningTeam} ${teamName}...`}
+              </h2>
             </>
           )}
 
@@ -101,9 +163,10 @@ function JoinTeamContent() {
                 </svg>
               </div>
               <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">{t.notFound}</h2>
+              <p className="text-sm text-zinc-400 dark:text-zinc-500 mb-4">{t.notFoundDesc}</p>
               <button
                 onClick={() => router.push("/teams")}
-                className="mt-4 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors"
+                className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors"
               >
                 {t.backToTeams}
               </button>
@@ -120,9 +183,14 @@ function JoinTeamContent() {
                 </svg>
               </div>
               <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">{t.pleaseLogin}</h2>
+              <p className="text-sm text-zinc-400 dark:text-zinc-500 mb-4">{t.pleaseLoginDesc}</p>
               <button
-                onClick={() => router.push("/login")}
-                className="mt-4 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors"
+                onClick={() => {
+                  // Save the current URL so we can redirect back after login
+                  sessionStorage.setItem('ngumpul_redirect_after_login', window.location.pathname + window.location.hash);
+                  router.push("/login");
+                }}
+                className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors"
               >
                 {t.goToLogin}
               </button>
