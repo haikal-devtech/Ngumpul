@@ -11,7 +11,7 @@ import {
   MessageCircle, Hash, Users, Send, Plus, X, LogIn,
   MoreVertical, Flag, Ban, Shield, ChevronLeft, Wifi, WifiOff,
   UserPlus, Link2, Check, Pickaxe, Smile, Image as ImageIcon,
-  Paperclip, Loader2
+  Paperclip, Loader2, MapPin, BarChart2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -54,6 +54,18 @@ export default function ChatPage() {
   const [showBlockedUsers, setShowBlockedUsers] = useState(false);
   const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
   const [loadingBlocked, setLoadingBlocked] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [showMembers, setShowMembers] = useState(false);
+  const [roomMembers, setRoomMembers] = useState<any[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [cancellingRoom, setCancellingRoom] = useState(false);
+  const [showPollModal, setShowPollModal] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState("");
+  const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
+  const [sendingLocation, setSendingLocation] = useState(false);
+  const [polls, setPolls] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -93,6 +105,18 @@ export default function ChatPage() {
     unblock: language === "id" ? "Buka Blokir" : "Unblock",
     noBlockedUsers: language === "id" ? "Tidak ada pengguna yang diblokir" : "No blocked users",
     unblockSuccess: language === "id" ? "Pengguna berhasil dibuka blokirnya" : "User unblocked successfully",
+    viewMembers: language === "id" ? "Info Grup" : "Group Info",
+    kick: language === "id" ? "Keluarkan" : "Kick",
+    kickSuccess: language === "id" ? "Anggota dikeluarkan" : "Member kicked",
+    deleteRoom: language === "id" ? "Hapus Ruang" : "Delete Room",
+    deleteRoomConfirm: language === "id" ? "Yakin ingin menghapus ruang ini?" : "Are you sure you want to delete this room?",
+    kickConfirm: language === "id" ? "Yakin ingin mengeluarkan anggota ini?" : "Are you sure you want to kick this member?",
+    createPoll: language === "id" ? "Buat Polling" : "Create Poll",
+    question: language === "id" ? "Pertanyaan" : "Question",
+    option: language === "id" ? "Pilihan" : "Option",
+    addOption: language === "id" ? "Tambah Pilihan" : "Add Option",
+    sendLocation: language === "id" ? "Bagikan Lokasi" : "Share Location",
+    vote: language === "id" ? "Pilih" : "Vote",
   };
 
   // ── Fetch rooms ───────────────────────────────────────────────────────────
@@ -112,6 +136,20 @@ export default function ChatPage() {
       setLoading(false);
     }
   }, [selectedRoom]);
+
+  // ── Fetch Polls ───────────────────────────────────────────────────────────
+  const fetchPolls = useCallback(async (roomId: string) => {
+    try {
+      const res = await fetch(`/api/chat/rooms/${roomId}/polls`);
+      if (res.ok) setPolls(await res.json());
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedRoom) fetchPolls(selectedRoom.id);
+  }, [selectedRoom, fetchPolls]);
 
   // ── Fetch messages ────────────────────────────────────────────────────────
   const fetchMessages = useCallback(async (roomId: string, cursor?: string | null) => {
@@ -166,13 +204,29 @@ export default function ChatPage() {
     });
   };
 
-  // ── Handle scroll to load more ────────────────────────────────────────────
+  // ── Handle scroll to load more and show scroll-to-bottom button ───────────
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
     if (target.scrollTop === 0 && hasMore && !loadingMore) {
       loadMoreMessages();
     }
+    
+    // Check if scrolled up more than 200px from the bottom
+    const isScrolledUp = target.scrollHeight - target.scrollTop - target.clientHeight > 200;
+    setShowScrollButton(isScrolledUp);
+    if (!isScrolledUp) {
+      setUnreadCount(0); // Clear unread since they're at the bottom
+    }
   };
+
+  const scrollToBottom = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' });
+    }
+    setUnreadCount(0);
+    setShowScrollButton(false);
+  };
+
 
   // ── Send message ──────────────────────────────────────────────────────────
   const sendMessage = async (overrideType?: 'text'|'image'|'sticker'|'emote', overrideContent?: string, mediaUrl?: string) => {
@@ -204,6 +258,8 @@ export default function ChatPage() {
         setMessages((prev) => [...prev, msg]);
         setNewMessage("");
         inputRef.current?.focus();
+        setTimeout(scrollToBottom, 50); // Ensure scroll happens after DOM update
+        
         // Broadcast via Supabase Realtime channel
         supabase.channel(`room:${selectedRoom.id}`).send({
           type: "broadcast",
@@ -483,6 +539,14 @@ export default function ChatPage() {
         // Avoid duplicating own messages (already added optimistically)
         setMessages((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;
+          
+          // If the user is scrolled up, increment unread count
+          if (chatContainerRef.current) {
+            const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+            const isScrolledUp = scrollHeight - scrollTop - clientHeight > 200;
+            if (isScrolledUp) setUnreadCount(c => c + 1);
+          }
+          
           return [...prev, msg];
         });
       })
@@ -494,6 +558,123 @@ export default function ChatPage() {
       supabase.removeChannel(channel);
     };
   }, [selectedRoom]);
+
+  // ── Admin Actions & Member List ───────────────────────────────────────────
+  const fetchRoomMembers = useCallback(async (roomId: string) => {
+    setLoadingMembers(true);
+    try {
+      const res = await fetch(`/api/chat/rooms/${roomId}/members`);
+      if (res.ok) {
+        setRoomMembers(await res.json());
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMembers(false);
+    }
+  }, []);
+
+  const deleteRoom = async () => {
+    if (!selectedRoom || !window.confirm(t.deleteRoomConfirm)) return;
+    setCancellingRoom(true);
+    try {
+      const res = await fetch(`/api/chat/rooms/${selectedRoom.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        addToast(language === 'id' ? 'Ruang dihapus' : 'Room deleted', 'success');
+        setSelectedRoom(null);
+        setShowMembers(false);
+        fetchRooms();
+      } else {
+        const data = await res.json();
+        addToast(data.error || 'Error', 'error');
+      }
+    } catch {
+      addToast('Error', 'error');
+    } finally {
+      setCancellingRoom(false);
+    }
+  };
+
+  const kickMember = async (userId: string) => {
+    if (!selectedRoom || !window.confirm(t.kickConfirm)) return;
+    try {
+      const res = await fetch(`/api/chat/rooms/${selectedRoom.id}/kick`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: userId }),
+      });
+      if (res.ok) {
+        addToast(t.kickSuccess, 'success');
+        fetchRoomMembers(selectedRoom.id);
+      } else {
+        const data = await res.json();
+        addToast(data.error || 'Error', 'error');
+      }
+    } catch {
+      addToast('Error', 'error');
+    }
+  };
+
+  useEffect(() => {
+    if (showMembers && selectedRoom) fetchRoomMembers(selectedRoom.id);
+  }, [showMembers, selectedRoom, fetchRoomMembers]);
+
+  // ── Poll & Location Actions ───────────────────────────────────────────────
+  const handleCreatePoll = async () => {
+    if (!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2 || !selectedRoom) return;
+    try {
+      const res = await fetch(`/api/chat/rooms/${selectedRoom.id}/polls`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: pollQuestion, options: pollOptions.filter(o => o.trim()) })
+      });
+      if (res.ok) {
+        const poll = await res.json();
+        setPolls(prev => [poll, ...prev]);
+        setShowPollModal(false);
+        setPollQuestion("");
+        setPollOptions(["", ""]);
+        await sendMessage('poll', poll.id);
+      }
+    } catch {
+      addToast('Error creating poll', 'error');
+    }
+  };
+
+  const handleVote = async (pollId: string, optionIndex: number) => {
+    if (!selectedRoom || !currentUser) return setShowLoginGate(true);
+    try {
+      const res = await fetch(`/api/chat/rooms/${selectedRoom.id}/polls/${pollId}/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ optionIndex })
+      });
+      if (res.ok) fetchPolls(selectedRoom.id);
+    } catch {
+      console.error('Failed to vote');
+    }
+  };
+
+  const handleSendLocation = () => {
+    if (!navigator.geolocation) {
+      addToast(language === 'id' ? 'Geolokasi tidak didukung browser ini' : 'Geolocation is not supported by your browser', 'error');
+      return;
+    }
+    setSendingLocation(true);
+    setShowAttachments(false);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const locationData = JSON.stringify({ lat: latitude, lng: longitude, label: language === 'id' ? 'Lokasi Saya' : 'My Location' });
+        sendMessage('location', locationData);
+        setSendingLocation(false);
+      },
+      () => {
+        addToast(language === 'id' ? 'Gagal mendapatkan lokasi' : 'Failed to get location', 'error');
+        setSendingLocation(false);
+      }
+    );
+  };
 
   // ── Supabase Presence: online users ───────────────────────────────────────
   useEffect(() => {
@@ -575,7 +756,7 @@ export default function ChatPage() {
   });
 
   return (
-    <div className="pt-16 min-h-screen bg-[#FAFAFA] dark:bg-zinc-950 flex">
+    <div className="pt-16 h-screen bg-[#FAFAFA] dark:bg-zinc-950 flex overflow-hidden">
       {/* ── Left Sidebar: Room List ────────────────────────────────────────── */}
       <AnimatePresence>
         {showSidebar && (
@@ -760,7 +941,7 @@ export default function ChatPage() {
                   </button>
                 )}
 
-                {/* Admin-only: Join Requests */}
+                {/* Join Requests */}
                 {selectedRoom?.createdById === currentUser?.id && selectedRoom.requiresApproval && (
                   <button
                     onClick={() => setShowJoinRequests(true)}
@@ -775,6 +956,15 @@ export default function ChatPage() {
                     )}
                   </button>
                 )}
+
+                {/* Group Info / Menu */}
+                <button
+                  onClick={() => setShowMembers(true)}
+                  className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                  title={t.viewMembers}
+                >
+                  <MoreVertical size={16} />
+                </button>
               </div>
             </div>
 
@@ -886,6 +1076,51 @@ export default function ChatPage() {
                                   <div className="text-4xl px-2 py-1">
                                     {msg.content}
                                   </div>
+                                ) : msg.type === "location" ? (
+                                  <div className={cn("p-1 rounded-2xl", isOwn ? "bg-indigo-600 rounded-tr-md" : "bg-zinc-100 dark:bg-zinc-800 rounded-tl-md")}>
+                                    <a href={`https://www.google.com/maps?q=${JSON.parse(msg.content).lat},${JSON.parse(msg.content).lng}`} target="_blank" rel="noreferrer">
+                                      <div className={cn("w-48 sm:w-56 h-36 rounded-xl flex flex-col items-center justify-center transition", isOwn ? "bg-indigo-700 hover:bg-indigo-800 text-indigo-200" : "bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-500 dark:text-zinc-400")}>
+                                        <MapPin size={28} className={cn("mb-2", isOwn ? "text-white" : "text-red-500")} />
+                                        <span className={cn("text-xs font-bold text-center px-2", isOwn ? "text-white" : "text-zinc-700 dark:text-zinc-300")}>{JSON.parse(msg.content).label}</span>
+                                      </div>
+                                    </a>
+                                  </div>
+                                ) : msg.type === "poll" ? (
+                                  (() => {
+                                    const poll = polls.find(p => p.id === msg.content);
+                                    if (!poll) return <div className="text-sm italic text-zinc-500 px-3 py-2">Poll not found</div>;
+                                    return (
+                                      <div className={cn("p-4 rounded-2xl w-64", isOwn ? "bg-indigo-600 text-white rounded-tr-md" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-tl-md")}>
+                                        <div className="flex items-center gap-2 mb-3">
+                                          <BarChart2 size={18} className="shrink-0" />
+                                          <span className="font-bold text-sm leading-tight text-balance">{poll.question}</span>
+                                        </div>
+                                        <div className="space-y-2">
+                                          {poll.options.map((opt: string, optIndex: number) => {
+                                             const voteCount = poll.votes.filter((v: any) => v.optionIndex === optIndex).length;
+                                             const totalVotes = poll.votes.length || 1;
+                                             const percent = Math.round((voteCount / totalVotes) * 100);
+                                             const hasVoted = poll.votes.some((v: any) => v.userId === currentUser?.id && v.optionIndex === optIndex);
+                                             return (
+                                               <button 
+                                                 key={optIndex} 
+                                                 onClick={() => handleVote(poll.id, optIndex)}
+                                                 className={cn("w-full relative overflow-hidden rounded-lg p-2 text-left text-xs transition border flex justify-between items-center group/btn",
+                                                   hasVoted 
+                                                     ? (isOwn ? "border-white/40 bg-white/20" : "border-indigo-400 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold")
+                                                     : (isOwn ? "border-white/20 hover:bg-white/10" : "border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700")
+                                                 )}>
+                                                 <div className="absolute inset-y-0 left-0 bg-current opacity-10 transition-all duration-500" style={{ width: `${percent}%` }} />
+                                                 <span className="relative z-10 break-words pr-2">{opt}</span>
+                                                 <span className="relative z-10 font-bold opacity-80 group-hover/btn:opacity-100 shrink-0">{voteCount}</span>
+                                               </button>
+                                             );
+                                          })}
+                                        </div>
+                                        <div className="text-[10px] opacity-70 mt-2.5 text-right">{poll.votes.length} {t.vote}s</div>
+                                      </div>
+                                    );
+                                  })()
                                 ) : (
                                   <div
                                     className={cn(
@@ -1016,6 +1251,22 @@ export default function ChatPage() {
                         <ImageIcon size={16} className="text-blue-500" />
                         {language === 'id' ? 'Gambar' : 'Image'}
                       </button>
+                      <button
+                        onClick={handleSendLocation}
+                        disabled={sendingLocation}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm font-semibold text-zinc-700 dark:text-zinc-300 transition-colors"
+                      >
+                        {sendingLocation ? <Loader2 size={16} className="text-red-500 animate-spin" /> : <MapPin size={16} className="text-red-500" />}
+                        {t.sendLocation}
+                      </button>
+                      <button
+                        onClick={() => { setShowPollModal(true); setShowAttachments(false); }}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm font-semibold text-zinc-700 dark:text-zinc-300 transition-colors"
+                      >
+                        <BarChart2 size={16} className="text-indigo-500" />
+                        {t.createPoll}
+                      </button>
+                      
                       <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
                       <div className="px-3 py-1.5 text-xs font-bold text-zinc-400 uppercase tracking-wider">
                         {language === 'id' ? 'Kirim Emote' : 'Send Emote'}
@@ -1300,6 +1551,98 @@ export default function ChatPage() {
         )}
       </AnimatePresence>
 
+      {/* ── Poll Creation Modal ──────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showPollModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowPollModal(false)}
+              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm"
+            >
+              <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-6 mx-4">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                    <BarChart2 size={18} className="text-indigo-500" />
+                    {t.createPoll}
+                  </h3>
+                  <button
+                    onClick={() => setShowPollModal(false)}
+                    className="w-8 h-8 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">{t.question}</label>
+                    <input
+                      value={pollQuestion}
+                      onChange={(e) => setPollQuestion(e.target.value)}
+                      placeholder={language === 'id' ? "Apa yang akan kita makan?" : "What should we eat?"}
+                      className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all font-medium text-zinc-900 dark:text-white placeholder:font-normal"
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">{t.option}s</label>
+                    <div className="space-y-2">
+                      {pollOptions.map((opt, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <input
+                            value={opt}
+                            onChange={(e) => {
+                              const newOpts = [...pollOptions];
+                              newOpts[i] = e.target.value;
+                              setPollOptions(newOpts);
+                            }}
+                            placeholder={`${t.option} ${i + 1}`}
+                            className="w-full bg-transparent border-b border-zinc-200 dark:border-zinc-700 px-2 py-1.5 text-sm outline-none focus:border-indigo-500 transition-colors text-zinc-900 dark:text-white"
+                          />
+                          {pollOptions.length > 2 && (
+                            <button
+                              onClick={() => setPollOptions(pollOptions.filter((_, idx) => idx !== i))}
+                              className="text-zinc-400 hover:text-red-500 p-1 transition"
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {pollOptions.length < 6 && (
+                        <button
+                          onClick={() => setPollOptions([...pollOptions, ""])}
+                          className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1 mt-2 hover:underline"
+                        >
+                          <Plus size={12} /> {t.addOption}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="pt-2">
+                    <button
+                      onClick={handleCreatePoll}
+                      disabled={!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2}
+                      className="w-full px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {t.create}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* ── Login Gate Modal ────────────────────────────────────────────────── */}
       <AnimatePresence>
         {showLoginGate && (
@@ -1444,6 +1787,117 @@ export default function ChatPage() {
           </>
         )}
       </AnimatePresence>
+
+      {/* ── Group Info / Members Modal ───────────────────────────────────────── */}
+      <AnimatePresence>
+        {showMembers && selectedRoom && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowMembers(false)}
+              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4"
+            >
+              <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-bold text-lg text-zinc-900 dark:text-white">{t.viewMembers}</h3>
+                  <button
+                    onClick={() => setShowMembers(false)}
+                    className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="mb-6 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
+                   <h4 className="font-bold text-zinc-900 dark:text-white mb-1">{selectedRoom.name}</h4>
+                   <p className="text-sm text-zinc-500">{selectedRoom.description || (language === 'id' ? 'Tidak ada deskripsi' : 'No description')}</p>
+                </div>
+
+                <div className="space-y-2 max-h-64 overflow-y-auto mb-6 pr-1">
+                  {loadingMembers ? (
+                    <div className="flex justify-center p-4"><Loader2 className="animate-spin text-zinc-400" /></div>
+                  ) : (
+                    roomMembers.map((member) => (
+                      <div key={member.id} className="flex items-center justify-between p-2 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800 transition">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img src={member.user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.user.name}`} alt={member.user.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
+                          <div className="min-w-0">
+                            <div className="font-bold text-sm text-zinc-900 dark:text-white truncate">
+                              {member.user.name} 
+                              {member.role === 'admin' && <span className="ml-2 text-[10px] uppercase font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded-md">Admin</span>}
+                              {member.user.id === currentUser?.id && <span className="ml-2 text-[10px] uppercase font-bold text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded-md">You</span>}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Kick Button */}
+                        {selectedRoom.createdById === currentUser?.id && member.user.id !== currentUser?.id && member.role !== 'admin' && (
+                          <button
+                            onClick={() => kickMember(member.user.id)}
+                            className="px-3 py-1.5 text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition"
+                          >
+                            {t.kick}
+                          </button>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {selectedRoom.createdById === currentUser?.id && (
+                  <button
+                    onClick={deleteRoom}
+                    disabled={cancellingRoom}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50"
+                  >
+                    {cancellingRoom ? <Loader2 size={16} className="animate-spin" /> : <Ban size={16} />}
+                    {t.deleteRoom}
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Image Lightbox Modal ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {lightboxImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm"
+            onClick={() => setLightboxImage(null)}
+          >
+            <button 
+              className="absolute top-6 right-6 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition"
+              onClick={() => setLightboxImage(null)}
+            >
+              <X size={28} />
+            </button>
+            <motion.img
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              src={lightboxImage}
+              alt="Fullscreen Viewer"
+              className="max-w-full max-h-full object-contain cursor-default select-none"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }

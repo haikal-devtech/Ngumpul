@@ -81,10 +81,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </motion.div>
         </AnimatePresence>
       </main>
-      <Footer 
-        onNavigate={handleNavigate} 
-        language={language}
-      />
+      {!pathname.startsWith('/chat') && (
+        <Footer 
+          onNavigate={handleNavigate} 
+          language={language}
+        />
+      )}
       <ToastContainer toasts={toasts} />
     </div>
   );

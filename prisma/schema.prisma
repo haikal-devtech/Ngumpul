@@ -58,6 +58,8 @@ model User {
   blockedByUsers   BlockedUser[]     @relation("Blocked")
   reportedMessages ReportedMessage[]
   chatJoinRequests ChatJoinRequest[]
+  chatPolls        ChatPoll[]
+  pollVotes        ChatPollVote[]
 }
 
 model VerificationToken {
@@ -155,6 +157,33 @@ model ChatRoom {
   messages    ChatMessage[]
   members     ChatMember[]
   joinRequests ChatJoinRequest[]
+  polls       ChatPoll[]
+}
+
+model ChatPoll {
+  id          String   @id @default(cuid())
+  roomId      String
+  question    String
+  options     String[] // JSON array or simply String[] depending on DB support (Postgres supports String[])
+  createdById String
+  createdAt   DateTime @default(now())
+
+  room      ChatRoom       @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdBy User           @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  votes     ChatPollVote[]
+}
+
+model ChatPollVote {
+  id          String   @id @default(cuid())
+  pollId      String
+  userId      String
+  optionIndex Int
+  createdAt   DateTime @default(now())
+
+  poll ChatPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, userId])
 }
 
 model ChatMessage {
