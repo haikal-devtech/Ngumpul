@@ -38,11 +38,11 @@ export default function EventDynamicPage({ params }: { params: Promise<{ slug: s
 
         // Update local context so the rest of the app stays in sync
         if (myEvents.some(e => e.id === data.id)) {
-          setMyEvents(prev => prev.map(e => e.id === data.id ? data : e));
+          setMyEvents(prev => prev.map(e => e.id === data.id ? { ...data, teamId: e.teamId, role: e.role } : e));
         } else {
           setJoinedEvents(prev => {
-            if (!prev.some(e => e.id === data.id)) return [data, ...prev];
-            return prev.map(e => e.id === data.id ? data : e);
+            if (!prev.some(e => e.id === data.id)) return [{ ...data, role: 'guest' }, ...prev];
+            return prev.map(e => e.id === data.id ? { ...data, teamId: e.teamId, role: e.role } : e);
           });
         }
       })

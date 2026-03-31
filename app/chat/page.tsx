@@ -131,11 +131,12 @@ const ChatMessageList = React.memo(({
                               <span className="font-bold text-sm leading-tight text-balance">{poll.question}</span>
                             </div>
                             <div className="space-y-2">
-                              {poll.options.map((opt: any, idx: number) => {
-                                const votesCount = opt.votes?.length || 0;
-                                const totalVotes = poll.options.reduce((acc: number, o: any) => acc + (o.votes?.length || 0), 0);
+                              {poll.options.map((optText: string, idx: number) => {
+                                const optionVotes = poll.votes ? poll.votes.filter((v: any) => v.optionIndex === idx) : [];
+                                const votesCount = optionVotes.length;
+                                const totalVotes = poll.votes ? poll.votes.length : 0;
                                 const percent = totalVotes > 0 ? Math.round((votesCount / totalVotes) * 100) : 0;
-                                const hasVoted = opt.votes?.some((v: any) => v.userId === currentUser?.id);
+                                const hasVoted = optionVotes.some((v: any) => v.userId === currentUser?.id);
                                 const isFinished = poll.isFinalized;
 
                                 return (
@@ -159,7 +160,7 @@ const ChatMessageList = React.memo(({
                                         <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center shrink-0", isOwn ? "border-white/40" : "border-zinc-300 dark:border-zinc-600")}>
                                           {hasVoted && <div className={cn("w-2 h-2 rounded-full", isOwn ? "bg-white" : "bg-indigo-500")} />}
                                         </div>
-                                        <span className={cn("text-xs font-medium truncate", isOwn ? "text-white" : "text-zinc-700 dark:text-zinc-200")}>{opt.text}</span>
+                                        <span className={cn("text-xs font-medium truncate", isOwn ? "text-white" : "text-zinc-700 dark:text-zinc-200")}>{optText}</span>
                                       </div>
                                       <span className={cn("text-[10px] font-bold shrink-0", isOwn ? "text-white/80" : "text-zinc-400")}>{percent}%</span>
                                     </div>
@@ -172,10 +173,10 @@ const ChatMessageList = React.memo(({
                                 {poll.isFinalized ? (
                                   <span className="text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1">
                                     <Check size={10} />
-                                    {poll.options.every((o: any) => o.votes?.length > 0) ? (language === 'id' ? 'SEMUA MEMBER SETUJU' : 'ALL MEMBERS AGREED') : (language === 'id' ? 'SELESAI' : 'FINISHED')}
+                                    {poll.options.every((_: any, idx: number) => poll.votes?.some((v: any) => v.optionIndex === idx)) ? (language === 'id' ? 'SEMUA MEMBER SETUJU' : 'ALL MEMBERS AGREED') : (language === 'id' ? 'SELESAI' : 'FINISHED')}
                                   </span>
                                 ) : (
-                                  `${poll.options.reduce((acc: number, o: any) => acc + (o.votes?.length || 0), 0)} votes`
+                                  `${poll.votes?.length || 0} votes`
                                 )}
                               </div>
                               {isOwn && !poll.isFinalized && (
@@ -838,7 +839,8 @@ export default function ChatPage() {
     try {
       const loc = await requestLocationPermission();
       if (loc) {
-        await sendMessage('location', JSON.stringify(loc));
+        const payload = { ...loc, label: language === 'id' ? 'Lokasi Saya' : 'My Location' };
+        await sendMessage('location', JSON.stringify(payload));
       }
     } catch (err) {
       console.error("Failed to share location:", err);
