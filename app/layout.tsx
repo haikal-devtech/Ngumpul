@@ -2,6 +2,7 @@ import React from "react";
 import "./globals.css";
 import { AppProvider } from "@/components/AppContext";
 import AppLayout from "@/components/AppLayout";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata = {
   title: "Ngumpul - Smart Scheduling",
@@ -25,6 +26,7 @@ export default function RootLayout({
             </AppLayout>
           </AppProvider>
         </Providers>
+        <SpeedInsights />
       </body>
     </html>
   );
