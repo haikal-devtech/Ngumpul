@@ -245,20 +245,33 @@ const ChatInputArea = React.memo(({
   t,
   language,
   uploadingMedia,
+  sendingLocation,
   showAttachments,
   setShowAttachments,
   showEmojiPicker,
   setShowEmojiPicker,
   onLocation,
-  onPoll,
-  handleKeyDown
+  onPoll
 }: any) => {
   const [text, setText] = useState("");
+
+  // Auto-resize textarea as user types
+  useEffect(() => {
+    const el = inputRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 128) + 'px';
+    }
+  }, [text]);
 
   const handleSend = () => {
     if (!text.trim()) return;
     onSend('text', text);
     setText("");
+    // Reset height after sending
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
   };
 
   const handleEmojiInsert = (emojiData: EmojiClickData) => {
@@ -360,7 +373,18 @@ const ChatInputArea = React.memo(({
           accept="image/*"
         />
 
-        <div className="flex-1 flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900 rounded-2xl px-4 py-1 border border-transparent focus-within:border-indigo-500/30 focus-within:bg-white dark:focus-within:bg-black transition-all">
+        <div className="flex-1 flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900 rounded-2xl px-4 py-1 border border-transparent focus-within:border-indigo-500/30 focus-within:bg-white dark:focus-within:bg-black transition-all relative">
+          {(uploadingMedia || sendingLocation) && (
+            <div className="absolute inset-0 rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/80 flex items-center justify-center z-10 gap-2">
+              <Loader2 size={16} className="animate-spin text-indigo-500" />
+              <span className="text-xs font-medium text-zinc-500">
+                {sendingLocation 
+                  ? (language === 'id' ? 'Mendapatkan lokasi...' : 'Getting location...')
+                  : (language === 'id' ? 'Mengunggah...' : 'Uploading...')
+                }
+              </span>
+            </div>
+          )}
           <textarea
             ref={inputRef}
             value={text}
@@ -373,8 +397,8 @@ const ChatInputArea = React.memo(({
                 handleSend();
               }
             }}
-            placeholder={t.placeholder}
-            className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 resize-none max-h-32 min-h-[40px] text-zinc-900 dark:text-white"
+            placeholder={t.typeMessage}
+            className="flex-1 bg-transparent border-none outline-none focus:ring-0 text-sm py-2 resize-none max-h-32 min-h-[40px] text-zinc-900 dark:text-white"
             rows={1}
           />
           <button
@@ -504,6 +528,8 @@ export default function ChatPage() {
     option: language === "id" ? "Pilihan" : "Option",
     addOption: language === "id" ? "Tambah Pilihan" : "Add Option",
     sendLocation: language === "id" ? "Bagikan Lokasi" : "Share Location",
+    attachPhoto: language === "id" ? "Foto" : "Photo",
+    attachLocation: language === "id" ? "Lokasi" : "Location",
     vote: language === "id" ? "Pilih" : "Vote",
   };
 
@@ -715,7 +741,7 @@ export default function ChatPage() {
     } finally {
       setSendingMessage(false);
     }
-  }, [session, currentUser, selectedRoom, sendingMessage, newMessage]);
+  }, [session, currentUser, selectedRoom, sendingMessage]);
 
   // ── Image Compression ─────────────────────────────────────────────────────
   const compressImage = (file: File): Promise<File | Blob> => {
@@ -768,6 +794,13 @@ export default function ChatPage() {
     setUploadingMedia(true);
     setShowAttachments(false);
     try {
+      if (file.size > 5 * 1024 * 1024) {
+        addToast(language === 'id' ? 'Ukuran maksimal file adalah 5MB' : 'Max file size is 5MB', 'error');
+        setUploadingMedia(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+
       let fileToUpload: File | Blob = file;
       if (file.size > 1024 * 1024) { // 1MB
         fileToUpload = await compressImage(file);
@@ -796,6 +829,25 @@ export default function ChatPage() {
     setShowEmojiPicker(false);
     setShowAttachments(false);
   };
+
+  const { requestLocationPermission } = useAppContext();
+  
+  const handleSendLocation = async () => {
+    setShowAttachments(false);
+    setSendingLocation(true); 
+    try {
+      const loc = await requestLocationPermission();
+      if (loc) {
+        await sendMessage('location', JSON.stringify(loc));
+      }
+    } catch (err) {
+      console.error("Failed to share location:", err);
+      addToast(language === 'id' ? 'Gagal membagikan lokasi' : 'Failed to share location', 'error');
+    } finally {
+      setSendingLocation(false);
+    }
+  };
+
 
   // ── Create room ───────────────────────────────────────────────────────────
   const createRoom = async () => {
@@ -1234,26 +1286,7 @@ export default function ChatPage() {
     }
   };
 
-  const handleSendLocation = () => {
-    if (!navigator.geolocation) {
-      addToast(language === 'id' ? 'Geolokasi tidak didukung browser ini' : 'Geolocation is not supported by your browser', 'error');
-      return;
-    }
-    setSendingLocation(true);
-    setShowAttachments(false);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const locationData = JSON.stringify({ lat: latitude, lng: longitude, label: language === 'id' ? 'Lokasi Saya' : 'My Location' });
-        sendMessage('location', locationData);
-        setSendingLocation(false);
-      },
-      () => {
-        addToast(language === 'id' ? 'Gagal mendapatkan lokasi' : 'Failed to get location', 'error');
-        setSendingLocation(false);
-      }
-    );
-  };
+  // Duplicate handleSendLocation removed
 
   // ── Supabase Presence: online users ───────────────────────────────────────
   useEffect(() => {
@@ -1769,6 +1802,7 @@ export default function ChatPage() {
                   t={t}
                   language={language}
                   uploadingMedia={uploadingMedia}
+                  sendingLocation={sendingLocation}
                   showAttachments={showAttachments}
                   setShowAttachments={setShowAttachments}
                   showEmojiPicker={showEmojiPicker}

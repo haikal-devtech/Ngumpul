@@ -81,7 +81,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </motion.div>
         </AnimatePresence>
       </main>
-      {!pathname.startsWith('/chat') && (
+      {pathname === '/' && (
         <Footer 
           onNavigate={handleNavigate} 
           language={language}
