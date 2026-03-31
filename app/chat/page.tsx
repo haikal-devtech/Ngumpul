@@ -204,9 +204,19 @@ const ChatMessageList = React.memo(({
                       </div>
                     )}
                     {isOwn && (
-                      <div className="absolute -right-5 bottom-1 flex gap-0.5 opacity-50">
-                        <Check size={10} className="text-indigo-400" />
-                        <Check size={10} className="text-indigo-400 -ml-2" />
+                      <div className={cn("absolute -right-5 bottom-1 flex gap-0.5", msg.status === 'error' ? "opacity-100" : "opacity-50")}>
+                        {msg.status === 'sending' ? (
+                          <Loader2 size={10} className="animate-spin text-indigo-400" />
+                        ) : msg.status === 'error' ? (
+                          <div className="w-2.5 h-2.5 rounded-full bg-red-500 flex items-center justify-center">
+                            <span className="text-[7px] text-white font-black leading-none">!</span>
+                          </div>
+                        ) : (
+                          <>
+                            <Check size={10} className="text-indigo-400" />
+                            <Check size={10} className="text-indigo-400 -ml-2" />
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -701,7 +711,7 @@ export default function ChatPage() {
 
 
   // ── Send message ──────────────────────────────────────────────────────────
-  const sendMessage = useCallback(async (overrideType?: 'text' | 'image' | 'sticker' | 'emote' | 'poll' | 'location', overrideContent?: string, mediaUrl?: string) => {
+  const sendMessage = useCallback(async (overrideType?: 'text' | 'image' | 'sticker' | 'emote' | 'poll' | 'location', overrideContent?: string, mediaUrl?: string, optimisticId?: string) => {
     if (!session || !currentUser) {
       setShowLoginGate(true);
       return;
@@ -712,6 +722,28 @@ export default function ChatPage() {
 
     if (!selectedRoom || sendingMessage) return;
     if (type === 'text' && !contentToSend.trim()) return;
+
+    // 1. Create optimistic message if not provided
+    const tempId = optimisticId || `temp-${Date.now()}`;
+    if (!optimisticId) {
+      const optimisticMsg: any = {
+        id: tempId,
+        roomId: selectedRoom.id,
+        senderId: currentUser.id,
+        content: contentToSend.trim(),
+        type,
+        mediaUrl: mediaUrl || null,
+        createdAt: new Date().toISOString(),
+        sender: {
+          id: currentUser.id,
+          name: currentUser.name,
+          image: currentUser.photoUrl
+        },
+        status: 'sending'
+      };
+      setMessages((prev) => [...prev, optimisticMsg]);
+      setTimeout(() => scrollToBottom(), 50);
+    }
 
     setSendingMessage(true);
     try {
@@ -727,9 +759,10 @@ export default function ChatPage() {
       });
       if (res.ok) {
         const msg = await res.json();
-        setMessages((prev) => [...prev, msg]);
+        
+        // 2. Replace optimistic message with real message
+        setMessages((prev) => prev.map(m => m.id === tempId ? { ...msg, status: 'sent' } : m));
         inputRef.current?.focus();
-        setTimeout(() => scrollToBottom(), 50); // Ensure scroll happens after DOM update
 
         // Broadcast via Supabase Realtime channel
         if (activeChannelRef.current) {
@@ -739,13 +772,17 @@ export default function ChatPage() {
             payload: msg,
           });
         }
+      } else {
+        throw new Error("Failed to send");
       }
     } catch (err) {
       console.error("Failed to send message:", err);
+      setMessages((prev) => prev.map(m => m.id === tempId ? { ...m, status: 'error' } : m));
+      addToast(language === 'id' ? 'Gagal mengirim pesan' : 'Failed to send message', 'error');
     } finally {
       setSendingMessage(false);
     }
-  }, [session, currentUser, selectedRoom, sendingMessage]);
+  }, [session, currentUser, selectedRoom, sendingMessage, language, addToast]);
 
   // ── Image Compression ─────────────────────────────────────────────────────
   const compressImage = (file: File): Promise<File | Blob> => {
@@ -797,9 +834,32 @@ export default function ChatPage() {
 
     setUploadingMedia(true);
     setShowAttachments(false);
+
+    // Create optimistic local preview
+    const tempId = `temp-img-${Date.now()}`;
+    const localUrl = URL.createObjectURL(file);
+    const optimisticImg: any = {
+      id: tempId,
+      roomId: selectedRoom.id,
+      senderId: currentUser.id,
+      content: 'Image',
+      type: 'image',
+      mediaUrl: localUrl,
+      createdAt: new Date().toISOString(),
+      sender: {
+        id: currentUser.id,
+        name: currentUser.name,
+        image: currentUser.photoUrl
+      },
+      status: 'sending'
+    };
+    setMessages((prev) => [...prev, optimisticImg]);
+    setTimeout(() => scrollToBottom(), 50);
+
     try {
       if (file.size > 5 * 1024 * 1024) {
         addToast(language === 'id' ? 'Ukuran maksimal file adalah 5MB' : 'Max file size is 5MB', 'error');
+        setMessages((prev) => prev.filter(m => m.id !== tempId));
         setUploadingMedia(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
         return;
@@ -812,13 +872,13 @@ export default function ChatPage() {
 
       const { url, error } = await uploadChatMedia(fileToUpload as File, selectedRoom.id);
       if (error || !url) {
-        addToast(language === 'id' ? 'Gagal mengunggah media' : 'Failed to upload media', 'error');
-        return;
+        throw new Error("Upload failed");
       }
 
-      // Send image message once uploaded
-      await sendMessage('image', 'Image', url);
+      // Send image message once uploaded, passing the existing tempId
+      await sendMessage('image', 'Image', url, tempId);
     } catch {
+      setMessages((prev) => prev.map(m => m.id === tempId ? { ...m, status: 'error' } : m));
       addToast(language === 'id' ? 'Gagal mengunggah media' : 'Failed to upload media', 'error');
     } finally {
       setUploadingMedia(false);
