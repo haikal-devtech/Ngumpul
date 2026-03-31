@@ -252,7 +252,8 @@ const ChatInputArea = React.memo(({
   showEmojiPicker,
   setShowEmojiPicker,
   onLocation,
-  onPoll
+  onPoll,
+  onTyping
 }: any) => {
   const [text, setText] = useState("");
 
@@ -391,6 +392,7 @@ const ChatInputArea = React.memo(({
             value={text}
             onChange={(e) => {
               setText(e.target.value);
+              onTyping();
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -439,7 +441,6 @@ export default function ChatPage() {
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [newMessage, setNewMessage] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [showSidebar, setShowSidebar] = useState(true);
   const [showOnlinePanel, setShowOnlinePanel] = useState(false);
@@ -478,7 +479,8 @@ export default function ChatPage() {
   const [polls, setPolls] = useState<any[]>([]);
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   const [editContent, setEditContent] = useState("");
-  const [typingTimeoutRef, setTypingTimeoutRef] = useState<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const activeChannelRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -552,7 +554,7 @@ export default function ChatPage() {
     }
   }, [selectedRoom, session]);
 
-  const handlePinRoom = async (roomId: string, isPinned: boolean) => {
+  const handlePinRoom = useCallback(async (roomId: string, isPinned: boolean) => {
     try {
       const res = await fetch(`/api/chat/rooms/${roomId}/pin`, {
         method: 'PATCH',
@@ -566,7 +568,7 @@ export default function ChatPage() {
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [addToast, fetchRooms]);
 
   useEffect(() => {
     if (!messages.length) { setLatestMedia(null); return; }
@@ -706,7 +708,7 @@ export default function ChatPage() {
     }
 
     const type = overrideType || 'text';
-    const contentToSend = overrideContent || newMessage;
+    const contentToSend = overrideContent || "";
 
     if (!selectedRoom || sendingMessage) return;
     if (type === 'text' && !contentToSend.trim()) return;
@@ -726,16 +728,17 @@ export default function ChatPage() {
       if (res.ok) {
         const msg = await res.json();
         setMessages((prev) => [...prev, msg]);
-        setNewMessage("");
         inputRef.current?.focus();
         setTimeout(() => scrollToBottom(), 50); // Ensure scroll happens after DOM update
 
         // Broadcast via Supabase Realtime channel
-        supabase.channel(`room:${selectedRoom.id}`).send({
-          type: "broadcast",
-          event: "new_message",
-          payload: msg,
-        });
+        if (activeChannelRef.current) {
+          activeChannelRef.current.send({
+            type: "broadcast",
+            event: "new_message",
+            payload: msg,
+          });
+        }
       }
     } catch (err) {
       console.error("Failed to send message:", err);
@@ -788,7 +791,7 @@ export default function ChatPage() {
   };
 
   // ── Handle Media Upload ───────────────────────────────────────────────────
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedRoom || !currentUser) return;
 
@@ -821,19 +824,19 @@ export default function ChatPage() {
       setUploadingMedia(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
-  };
+  }, [selectedRoom, currentUser, language, addToast, sendMessage]);
 
 
 
-  const sendEmote = (emoteName: string) => {
+  const sendEmote = useCallback((emoteName: string) => {
     sendMessage('emote', emoteName);
     setShowEmojiPicker(false);
     setShowAttachments(false);
-  };
+  }, [sendMessage]);
 
   const { requestLocationPermission } = useAppContext();
   
-  const handleSendLocation = async () => {
+  const handleSendLocation = useCallback(async () => {
     setShowAttachments(false);
     setSendingLocation(true); 
     try {
@@ -848,11 +851,11 @@ export default function ChatPage() {
     } finally {
       setSendingLocation(false);
     }
-  };
+  }, [requestLocationPermission, language, sendMessage, addToast]);
 
 
   // ── Create room ───────────────────────────────────────────────────────────
-  const createRoom = async () => {
+  const createRoom = useCallback(async () => {
     if (!session) {
       setShowLoginGate(true);
       return;
@@ -876,10 +879,10 @@ export default function ChatPage() {
     } catch (err) {
       console.error("Failed to create room:", err);
     }
-  };
+  }, [session, newRoomName, newRoomDesc]);
 
   // ── Generate Invite Link ──────────────────────────────────────────────────
-  const generateInviteLink = async () => {
+  const generateInviteLink = useCallback(async () => {
     if (!selectedRoom || generatingInvite) return;
     setGeneratingInvite(true);
     try {
@@ -898,10 +901,10 @@ export default function ChatPage() {
     } finally {
       setGeneratingInvite(false);
     }
-  };
+  }, [selectedRoom, generatingInvite, addToast, t.inviteError]);
 
   // ── Moderation: report ────────────────────────────────────────────────────
-  const reportMessage = async (messageId: string) => {
+  const reportMessage = useCallback(async (messageId: string) => {
     try {
       const res = await fetch("/api/chat/moderation", {
         method: "POST",
@@ -917,10 +920,10 @@ export default function ChatPage() {
       addToast("Error", "error");
     }
     setContextMenu(null);
-  };
+  }, [addToast, t.reportSuccess]);
 
   // ── Moderation: block ─────────────────────────────────────────────────────
-  const blockUser = async (userId: string) => {
+  const blockUser = useCallback(async (userId: string) => {
     try {
       const res = await fetch("/api/chat/moderation", {
         method: "POST",
@@ -939,10 +942,10 @@ export default function ChatPage() {
       addToast("Error", "error");
     }
     setContextMenu(null);
-  };
+  }, [addToast, t.blockSuccess]);
 
   // ── Message Actions: Edit & Delete ───────────────────────────────────────
-  const handleEditMessage = async () => {
+  const handleEditMessage = useCallback(async () => {
     if (!editingMessage || !editContent.trim()) return;
     try {
       const res = await fetch(`/api/chat/messages/${editingMessage.id}`, {
@@ -958,18 +961,20 @@ export default function ChatPage() {
         addToast(language === 'id' ? 'Pesan diperbarui' : 'Message updated', 'success');
 
         // Broadcast update
-        supabase.channel(`room:${selectedRoom!.id}`).send({
-          type: "broadcast",
-          event: "message_updated",
-          payload: updated,
-        });
+        if (activeChannelRef.current) {
+          activeChannelRef.current.send({
+            type: "broadcast",
+            event: "message_updated",
+            payload: updated,
+          });
+        }
       }
     } catch {
       addToast('Error', 'error');
     }
-  };
+  }, [editingMessage, editContent, addToast, language]);
 
-  const handleDeleteMessage = async (messageId: string) => {
+  const handleDeleteMessage = useCallback(async (messageId: string) => {
     const msg = messages.find(m => m.id === messageId);
     if (!msg) return;
 
@@ -995,7 +1000,7 @@ export default function ChatPage() {
       console.error(err);
     }
     setContextMenu(null);
-  };
+  }, [messages, roomMembers, currentUser, language, addToast]);
 
   // ── Blocked Users ────────────────────────────────────────────────────────
   const fetchBlockedUsers = useCallback(async () => {
@@ -1013,7 +1018,7 @@ export default function ChatPage() {
     }
   }, []);
 
-  const unblockUser = async (userId: string) => {
+  const unblockUser = useCallback(async (userId: string) => {
     try {
       const res = await fetch("/api/chat/moderation", {
         method: "POST",
@@ -1032,7 +1037,7 @@ export default function ChatPage() {
     } catch {
       addToast("Error", "error");
     }
-  };
+  }, [addToast, t.unblockSuccess, selectedRoom, fetchMessages]);
 
   useEffect(() => {
     if (showBlockedUsers) fetchBlockedUsers();
@@ -1054,7 +1059,7 @@ export default function ChatPage() {
     }
   }, []);
 
-  const handleJoinRequest = async (requestId: string, action: 'approve' | 'reject') => {
+  const handleJoinRequest = useCallback(async (requestId: string, action: 'approve' | 'reject') => {
     if (!selectedRoom) return;
     try {
       const res = await fetch(`/api/chat/rooms/${selectedRoom.id}/requests`, {
@@ -1078,7 +1083,7 @@ export default function ChatPage() {
     } catch {
       addToast("Error", "error");
     }
-  };
+  }, [selectedRoom, language, addToast, fetchJoinRequests, fetchRooms]);
 
   useEffect(() => {
     if (showJoinRequests && selectedRoom) {
@@ -1127,6 +1132,7 @@ export default function ChatPage() {
     if (!selectedRoom) return;
 
     const channel = supabase.channel(`room:${selectedRoom.id}`);
+    activeChannelRef.current = channel;
 
     channel
       .on("broadcast", { event: "new_message" }, (payload) => {
@@ -1169,27 +1175,25 @@ export default function ChatPage() {
 
     return () => {
       supabase.removeChannel(channel);
+      activeChannelRef.current = null;
     };
   }, [selectedRoom, currentUser]);
 
-  // ── Typing Indicator Broadcast ──────────────────────────────────────────
-  useEffect(() => {
-    if (!selectedRoom || !session || !currentUser || !newMessage.trim()) return;
+  const handleTyping = useCallback(() => {
+    if (!selectedRoom || !session || !currentUser) return;
 
-    if (typingTimeoutRef) clearTimeout(typingTimeoutRef);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
-    const timeout = setTimeout(() => {
-      const channel = supabase.channel(`room:${selectedRoom.id}`);
-      channel.send({
-        type: "broadcast",
-        event: "typing",
-        payload: { user: { id: currentUser.id, name: currentUser.name, image: currentUser.photoUrl } }
-      });
+    typingTimeoutRef.current = setTimeout(() => {
+      if (activeChannelRef.current) {
+        activeChannelRef.current.send({
+          type: "broadcast",
+          event: "typing",
+          payload: { user: { id: currentUser.id, name: currentUser.name, image: currentUser.photoUrl } }
+        });
+      }
     }, 500);
-
-    setTypingTimeoutRef(timeout);
-    return () => clearTimeout(timeout);
-  }, [newMessage, selectedRoom, currentUser]);
+  }, [selectedRoom, session, currentUser]);
 
   // ── Admin Actions & Member List ───────────────────────────────────────────
   const fetchRoomMembers = useCallback(async (roomId: string) => {
@@ -1206,7 +1210,7 @@ export default function ChatPage() {
     }
   }, []);
 
-  const deleteRoom = async () => {
+  const deleteRoom = useCallback(async () => {
     if (!selectedRoom || !window.confirm(t.deleteRoomConfirm)) return;
     setCancellingRoom(true);
     try {
@@ -1225,9 +1229,9 @@ export default function ChatPage() {
     } finally {
       setCancellingRoom(false);
     }
-  };
+  }, [selectedRoom, t.deleteRoomConfirm, language, addToast, fetchRooms]);
 
-  const kickMember = async (userId: string) => {
+  const kickMember = useCallback(async (userId: string) => {
     if (!selectedRoom || !window.confirm(t.kickConfirm)) return;
     try {
       const res = await fetch(`/api/chat/rooms/${selectedRoom.id}/kick`, {
@@ -1245,7 +1249,7 @@ export default function ChatPage() {
     } catch {
       addToast('Error', 'error');
     }
-  };
+  }, [selectedRoom, t.kickConfirm, t.kickSuccess, fetchRoomMembers, addToast]);
 
   useEffect(() => {
     if (showMembers && selectedRoom) fetchRoomMembers(selectedRoom.id);
@@ -1274,7 +1278,7 @@ export default function ChatPage() {
     }
   };
 
-  const handleVote = async (pollId: string, optionIndex: number) => {
+  const handleVote = useCallback(async (pollId: string, optionIndex: number) => {
     if (!selectedRoom || !currentUser) return setShowLoginGate(true);
     try {
       const res = await fetch(`/api/chat/rooms/${selectedRoom.id}/polls/${pollId}/vote`, {
@@ -1286,7 +1290,7 @@ export default function ChatPage() {
     } catch {
       console.error('Failed to vote');
     }
-  };
+  }, [selectedRoom, currentUser, fetchPolls]);
 
   // Duplicate handleSendLocation removed
 
@@ -1336,21 +1340,21 @@ export default function ChatPage() {
 
 
   // ── Format timestamp ──────────────────────────────────────────────────────
-  const formatTime = (dateStr: string) => {
+  const formatTime = useCallback((dateStr: string) => {
     try {
       return format(new Date(dateStr), "HH:mm");
     } catch {
       return "";
     }
-  };
+  }, []);
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = useCallback((dateStr: string) => {
     try {
       return format(new Date(dateStr), "dd MMM yyyy");
     } catch {
       return "";
     }
-  };
+  }, []);
 
   // ── Group messages by date ────────────────────────────────────────────────
   const groupedMessages = useMemo(() => {
@@ -1367,10 +1371,19 @@ export default function ChatPage() {
     return groups;
   }, [messages]);
 
-  const handleRoomSelect = (room: ChatRoom) => {
+  const handleRoomSelect = useCallback((room: ChatRoom) => {
     setSelectedRoom(room);
     if (window.innerWidth < 768) setShowSidebar(false);
-  };
+  }, []);
+
+  const handleEditInit = useCallback((msg: any) => {
+    setEditingMessage(msg);
+    setEditContent(msg.content);
+  }, []);
+
+  const handleLightboxOpen = useCallback((url: string) => {
+    setLightboxImage(url);
+  }, []);
 
   return (
     <div className="pt-16 h-screen bg-[#FAFAFA] dark:bg-zinc-950 flex overflow-hidden">
@@ -1738,8 +1751,8 @@ export default function ChatPage() {
                       onReport={reportMessage}
                       onBlock={blockUser}
                       onDelete={handleDeleteMessage}
-                      onEdit={(msg: any) => { setEditingMessage(msg); setEditContent(msg.content); }}
-                      onLightbox={(url: string) => setLightboxImage(url)}
+                      onEdit={handleEditInit}
+                      onLightbox={handleLightboxOpen}
                       setContextMenu={setContextMenu}
                       formatTime={formatTime}
                     />
@@ -1811,6 +1824,7 @@ export default function ChatPage() {
                   setShowEmojiPicker={setShowEmojiPicker}
                   onLocation={handleSendLocation}
                   onPoll={() => setShowPollModal(true)}
+                  onTyping={handleTyping}
                 />
               ) : (
                 <div className="border-t border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-indigo-50 via-white to-violet-50 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900 p-4">
