@@ -6,7 +6,7 @@ import { NgumpulEvent } from "@/lib/types";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const session = await auth();
@@ -14,11 +14,11 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params;
+    const { slug } = await params;
 
     // 1. Fetch the event
     const eventData = await prisma.event.findUnique({
-      where: { id },
+      where: { slug },
       include: {
         participants: { include: { user: { select: { name: true } } } }
       }

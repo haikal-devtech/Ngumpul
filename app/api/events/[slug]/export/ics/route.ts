@@ -5,13 +5,13 @@ import { NgumpulEvent } from "@/lib/types";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { slug } = await params;
 
     const eventData = await prisma.event.findUnique({
-      where: { id },
+      where: { slug },
       include: {
         participants: {
           include: {

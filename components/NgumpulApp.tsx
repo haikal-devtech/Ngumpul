@@ -10,24 +10,24 @@ import { useAppContext } from './AppContext';
 
 // --- Components ---
 
-export const Navbar = ({ 
+export const Navbar = ({
   view,
   onNavigate,
-  hasEvents, 
-  currentUser, 
-  theme, 
-  toggleTheme, 
+  hasEvents,
+  currentUser,
+  theme,
+  toggleTheme,
   onCreate,
   language,
   setLanguage,
   joinedEvents
-}: { 
+}: {
   view: string,
   onNavigate: (view: string) => void,
-  hasEvents: boolean, 
-  currentUser: UserProfile | null, 
-  theme: 'light' | 'dark', 
-  toggleTheme: () => void, 
+  hasEvents: boolean,
+  currentUser: UserProfile | null,
+  theme: 'light' | 'dark',
+  toggleTheme: () => void,
   onCreate: () => void,
   language: 'en' | 'id',
   setLanguage: (lang: 'en' | 'id') => void,
@@ -56,7 +56,7 @@ export const Navbar = ({
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate('landing')}>
             <span className="text-xl font-extrabold tracking-tight text-indigo-600 dark:text-indigo-500">Ngumpul</span>
           </div>
-          
+
           <div className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-500 dark:text-zinc-400 relative">
             {navItems.map((item) => (
               <button
@@ -84,21 +84,21 @@ export const Navbar = ({
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="hidden lg:flex items-center bg-zinc-100 dark:bg-zinc-900 rounded-full px-4 py-2">
             <Search size={16} className="text-zinc-400" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder={language === 'id' ? "Cari acara..." : "Search events..."}
               className="bg-transparent border-none outline-none text-sm ml-2 w-48 text-zinc-900 dark:text-white placeholder:text-zinc-400"
             />
           </div>
 
           <div className="hidden sm:flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-full p-1">
-            <button 
+            <button
               onClick={() => setLanguage('en')}
               className={cn("px-2 py-1 text-xs font-bold rounded-full transition-colors", language === 'en' ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 dark:text-zinc-400")}
             >
               EN
             </button>
-            <button 
+            <button
               onClick={() => setLanguage('id')}
               className={cn("px-2 py-1 text-xs font-bold rounded-full transition-colors", language === 'id' ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 dark:text-zinc-400")}
             >
@@ -107,7 +107,7 @@ export const Navbar = ({
           </div>
 
           <div className="relative">
-            <motion.button 
+            <motion.button
               whileHover={{ rotate: 15, scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => setShowNotifications(!showNotifications)}
@@ -120,7 +120,7 @@ export const Navbar = ({
 
             <AnimatePresence>
               {showNotifications && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -156,8 +156,8 @@ export const Navbar = ({
             </AnimatePresence>
           </div>
 
-          <button 
-            onClick={toggleTheme} 
+          <button
+            onClick={toggleTheme}
             className="relative shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-400 transition-colors overflow-hidden"
           >
             <AnimatePresence mode="wait">
@@ -174,10 +174,10 @@ export const Navbar = ({
           </button>
 
           {currentUser ? (
-            <motion.div 
+            <motion.div
               whileHover={{ scale: 1.02, backgroundColor: theme === 'dark' ? '#27272a' : '#f4f4f5' }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-3 cursor-pointer shrink-0 ml-1 sm:ml-2 bg-zinc-50 dark:bg-zinc-900 px-2 sm:px-3 py-1.5 rounded-full transition-colors border border-zinc-200 dark:border-zinc-700" 
+              className="flex items-center gap-3 cursor-pointer shrink-0 ml-1 sm:ml-2 bg-zinc-50 dark:bg-zinc-900 px-2 sm:px-3 py-1.5 rounded-full transition-colors border border-zinc-200 dark:border-zinc-700"
               onClick={() => onNavigate('profile')}
             >
               <img src={currentUser.photoUrl} alt="Profile" className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover" />
@@ -189,7 +189,7 @@ export const Navbar = ({
             </button>
           )}
 
-          <motion.button 
+          <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onCreate}
@@ -198,7 +198,7 @@ export const Navbar = ({
             {language === 'id' ? 'Buat Acara' : 'Create Event'}
           </motion.button>
 
-          <button 
+          <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="flex md:hidden w-9 h-9 items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0 ml-1"
           >
@@ -211,7 +211,7 @@ export const Navbar = ({
       <AnimatePresence>
         {isMenuOpen && (
           <>
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -234,8 +234,8 @@ export const Navbar = ({
                       onClick={() => handleMobileNav(item.id)}
                       className={cn(
                         "flex items-center justify-between px-4 py-4 rounded-2xl transition-all font-bold text-left",
-                        view === item.id 
-                          ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400" 
+                        view === item.id
+                          ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
                           : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900"
                       )}
                     >
@@ -249,13 +249,13 @@ export const Navbar = ({
                   <div className="flex items-center justify-between px-2">
                     <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Language</span>
                     <div className="flex bg-zinc-100 dark:bg-zinc-900 rounded-full p-1">
-                      <button 
+                      <button
                         onClick={() => setLanguage('en')}
                         className={cn("px-4 py-1.5 text-xs font-bold rounded-full transition-all", language === 'en' ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-mdScale" : "text-zinc-500 dark:text-zinc-400")}
                       >
                         English
                       </button>
-                      <button 
+                      <button
                         onClick={() => setLanguage('id')}
                         className={cn("px-4 py-1.5 text-xs font-bold rounded-full transition-all", language === 'id' ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-mdScale" : "text-zinc-500 dark:text-zinc-400")}
                       >
@@ -264,7 +264,7 @@ export const Navbar = ({
                     </div>
                   </div>
 
-                  <button 
+                  <button
                     onClick={onCreate}
                     className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 dark:shadow-none mt-4"
                   >
@@ -277,8 +277,8 @@ export const Navbar = ({
               <div className="mt-auto border-t border-zinc-100 dark:border-zinc-800 pt-6 flex flex-col gap-4">
                 <div className="lg:flex items-center bg-zinc-100 dark:bg-zinc-900 rounded-2xl px-4 py-4 flex gap-3">
                   <Search size={18} className="text-zinc-400" />
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     placeholder={language === 'id' ? "Cari acara..." : "Search events..."}
                     className="bg-transparent border-none outline-none text-sm w-full text-zinc-900 dark:text-white placeholder:text-zinc-400"
                   />
@@ -325,7 +325,7 @@ export const Footer = ({ onNavigate, language }: { onNavigate: (view: string) =>
             <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center"><span className="text-xs font-bold">In</span></div>
           </div>
         </div>
-        
+
         <div>
           <h4 className="font-bold text-zinc-900 dark:text-white mb-4">{t.product}</h4>
           <ul className="space-y-3 text-sm text-zinc-500 dark:text-zinc-400">
@@ -357,7 +357,7 @@ export const Footer = ({ onNavigate, language }: { onNavigate: (view: string) =>
           </div>
         </div>
       </div>
-      
+
       <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-zinc-200 dark:border-zinc-800 text-xs text-zinc-400 font-medium uppercase tracking-wider">
         <p>© 2024 NGUMPUL - THE FLUID COLLECTIVE.</p>
         <div className="flex gap-6 mt-4 md:mt-0">
@@ -376,7 +376,7 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
     title2: language === 'id' ? 'kumpul' : 'hangouts',
     title3: language === 'id' ? ' bareng ' : ' ',
     title4: language === 'id' ? 'tanpa ribet.' : 'without the hassle.',
-    desc: language === 'id' 
+    desc: language === 'id'
       ? 'Satu aplikasi untuk menentukan waktu, lokasi, dan siapa yang bisa hadir. Berhenti melakukan polling manual di grup chat yang berujung wacana.'
       : 'One app to decide the time, location, and who can attend. Stop doing manual polls in group chats that never happen.',
     btnCreate: language === 'id' ? 'Buat Event Baru' : 'Create New Event',
@@ -410,10 +410,10 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
   return (
     <div className="w-full bg-white dark:bg-zinc-950 font-sans pt-20">
       {/* Hero Section */}
-      <section 
+      <section
         className="pt-20 pb-20 px-4 sm:px-6 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
       >
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
@@ -436,7 +436,7 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
             >
               {t.btnCreate} <ChevronRight size={18} />
             </motion.button>
-            <motion.button 
+            <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
@@ -446,7 +446,7 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
             </motion.button>
           </div>
         </motion.div>
-        
+
         {/* Right side graphic */}
         <div className="relative w-full aspect-square max-w-lg mx-auto lg:ml-auto">
           {/* Main Image Card */}
@@ -508,12 +508,12 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
       </section>
 
       {/* How it Works Section */}
-      <motion.section 
+      <motion.section
         initial={{ opacity: 0, y: 50 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
-        id="how-it-works" 
+        id="how-it-works"
         className="py-24 px-4 sm:px-6 max-w-7xl mx-auto border-t border-zinc-100 dark:border-zinc-800"
       >
         <div className="text-center mb-16">
@@ -525,7 +525,7 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
           </p>
         </div>
 
-        <motion.div 
+        <motion.div
           variants={{
             hidden: { opacity: 0 },
             show: {
@@ -560,8 +560,8 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
               icon: <CheckCircle className="text-indigo-600" size={24} />
             }
           ].map((item, i) => (
-            <motion.div 
-              key={i} 
+            <motion.div
+              key={i}
               variants={{
                 hidden: { y: 30, opacity: 0 },
                 show: { y: 0, opacity: 1 }
@@ -580,14 +580,14 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
       </motion.section>
 
       {/* Features Section */}
-      <motion.section 
+      <motion.section
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8 }}
         className="py-24 px-4 sm:px-6 max-w-5xl mx-auto text-center"
       >
-        <motion.h2 
+        <motion.h2
           initial={{ y: 20, opacity: 0 }}
           whileInView={{ y: 0, opacity: 1 }}
           viewport={{ once: true }}
@@ -595,7 +595,7 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
         >
           {t.featTitle}
         </motion.h2>
-        <motion.p 
+        <motion.p
           initial={{ y: 20, opacity: 0 }}
           whileInView={{ y: 0, opacity: 1 }}
           viewport={{ once: true }}
@@ -604,10 +604,10 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
         >
           {t.featDesc}
         </motion.p>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
           {/* Heatmap */}
-          <motion.div 
+          <motion.div
             whileHover={{ y: -5 }}
             transition={{ duration: 0.2 }}
             className="md:col-span-2 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl p-8 border border-zinc-100 dark:border-zinc-800 relative overflow-hidden"
@@ -627,7 +627,7 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
           </motion.div>
 
           {/* Link Sekali Klik */}
-          <motion.div 
+          <motion.div
             whileHover={{ y: -5 }}
             transition={{ duration: 0.2 }}
             className="bg-zinc-100 dark:bg-zinc-800/50 rounded-3xl p-8 border border-zinc-200 dark:border-zinc-700"
@@ -644,7 +644,7 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
           </motion.div>
 
           {/* Voting Lokasi */}
-          <motion.div 
+          <motion.div
             whileHover={{ y: -5 }}
             transition={{ duration: 0.2 }}
             className="bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl p-8 border border-zinc-100 dark:border-zinc-800"
@@ -682,7 +682,7 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
       </motion.section>
 
       {/* Stats Section */}
-      <motion.section 
+      <motion.section
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
@@ -710,14 +710,14 @@ export const LandingPage = ({ onCreate, onNavigate, language }: { onCreate: () =
       </motion.section>
 
       {/* CTA Section */}
-      <motion.section 
+      <motion.section
         initial={{ opacity: 0, scale: 0.9 }}
         whileInView={{ opacity: 1, scale: 1 }}
         viewport={{ once: true }}
         className="py-32 px-4 text-center"
       >
         <h2 className="text-4xl md:text-5xl font-extrabold text-zinc-900 dark:text-white mb-8 tracking-tight">
-          {t.ctaTitle1}<br/>{t.ctaTitle2}<span className="text-emerald-600 dark:text-emerald-500">{t.ctaTitle3}</span>
+          {t.ctaTitle1}<br />{t.ctaTitle2}<span className="text-emerald-600 dark:text-emerald-500">{t.ctaTitle3}</span>
         </h2>
         <button
           onClick={onCreate}
@@ -734,7 +734,7 @@ export const CreateEvent = ({ onSaved, language, initialEvent, teamId }: { onSav
   const [title, setTitle] = useState(initialEvent?.title || '');
   const [desc, setDesc] = useState(initialEvent?.description || '');
   const [location, setLocation] = useState(initialEvent?.location || '');
-  const [locationDetails, setLocationDetails] = useState<{name: string, address: string, lat: number, lng: number} | null>(null);
+  const [locationDetails, setLocationDetails] = useState<{ name: string, address: string, lat: number, lng: number } | null>(null);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [startDate, setStartDate] = useState(initialEvent && initialEvent.dates.length > 0 ? format(parseISO(initialEvent.dates[0]), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(initialEvent && initialEvent.dates.length > 0 ? format(parseISO(initialEvent.dates[initialEvent.dates.length - 1]), 'yyyy-MM-dd') : format(addDays(new Date(), 3), 'yyyy-MM-dd'));
@@ -926,7 +926,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
   const { addToast, language: ctxLanguage } = useAppContext();
   const [name, setName] = useState(currentUser?.name || '');
   const [isJoined, setIsJoined] = useState(false); // Check if current user is already in participants
-  
+
   React.useEffect(() => {
     if (currentUser) {
       setName(currentUser.name);
@@ -1001,7 +1001,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
   // Real heatmap data based on all participants
   const heatmapData = React.useMemo(() => {
     const data: Record<string, number> = {};
-    
+
     // Initialize with 0
     event.dates.forEach(date => {
       times.forEach(time => {
@@ -1033,9 +1033,9 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
         }
       });
     }
-    
+
     return data;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event.dates, times, event.participants, isJoined, myAvailability, currentUser?.id]);
 
   const getHeatmapColor = (count: number, total: number) => {
@@ -1048,7 +1048,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
   };
 
   // Find best slots
-  const bestSlots = React.useMemo(() => 
+  const bestSlots = React.useMemo(() =>
     Object.entries(heatmapData)
       .filter(([_, count]) => (count as number) > 0)
       .sort((a, b) => (b[1] as number) - (a[1] as number))
@@ -1100,7 +1100,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
     return () => window.removeEventListener('mouseup', onMouseUp);
   }, []);
 
-    const handleSaveSchedule = () => {
+  const handleSaveSchedule = () => {
     const newParticipant: Participant = {
       id: currentUser?.id || Math.random().toString(36).substr(2, 9),
       name: name,
@@ -1110,7 +1110,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
 
     const updatedParticipants = [...event.participants];
     const existingIdx = updatedParticipants.findIndex(p => p.id === newParticipant.id || (p.name === name && !p.id.includes('-')));
-    
+
     if (existingIdx >= 0) {
       updatedParticipants[existingIdx] = newParticipant;
     } else {
@@ -1133,7 +1133,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
 
   if (!isJoined) {
     return (
-      <motion.section 
+      <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="pt-32 pb-20 px-4 sm:px-6 max-w-md mx-auto"
@@ -1162,14 +1162,14 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
   }
 
   return (
-    <motion.section 
+    <motion.section
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="pt-32 pb-20 px-4 sm:px-6 max-w-6xl mx-auto"
     >
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left: Event Info */}
-        <motion.div 
+        <motion.div
           initial={{ x: -20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           className="lg:col-span-1 space-y-6"
@@ -1177,7 +1177,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
           <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800 p-6 shadow-sm">
             <h1 className="text-2xl font-bold mb-4 dark:text-white">{event.title}</h1>
             {event.description && <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-6">{event.description}</p>}
-            <motion.div 
+            <motion.div
               variants={{
                 hidden: { opacity: 0 },
                 show: {
@@ -1213,7 +1213,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
                 </div>
               </div>
             )}
-            
+
             {event.confirmedSlot && (() => {
               const [datePart, timePart] = event.confirmedSlot!.split(/-(?=\d{2}:\d{2}$)/);
               const startDate = parseISO(datePart);
@@ -1230,7 +1230,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
                 details: event.description || '',
                 location: event.location || '',
               });
-              
+
               const handleDownloadICS = (e: React.MouseEvent) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -1254,44 +1254,44 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
               };
 
               return (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 p-4 rounded-2xl"
-                  >
-                    <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-sm mb-1">
-                      <CheckCircle size={16} />
-                      {t.confirmedSlotLabel}
-                    </div>
-                    <div className="text-zinc-900 dark:text-white font-black mb-3">
-                      {format(parseISO(datePart), 'EEEE, dd MMM')} @ {timePart}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <motion.a
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        href={`https://calendar.google.com/calendar/render?${gcalParams.toString()}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                      >
-                        <span>🗓️</span> {language === 'id' ? 'Tambah ke Google Calendar' : 'Add to Google Calendar'}
-                      </motion.a>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={handleDownloadICS}
-                        className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                      >
-                        <span>🍎</span> {language === 'id' ? 'Tambah ke Apple Calendar' : 'Add to Apple Calendar'}
-                      </motion.button>
-                    </div>
-                  </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 p-4 rounded-2xl"
+                >
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-sm mb-1">
+                    <CheckCircle size={16} />
+                    {t.confirmedSlotLabel}
+                  </div>
+                  <div className="text-zinc-900 dark:text-white font-black mb-3">
+                    {format(parseISO(datePart), 'EEEE, dd MMM')} @ {timePart}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <motion.a
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      href={`https://calendar.google.com/calendar/render?${gcalParams.toString()}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                    >
+                      <span>🗓️</span> {language === 'id' ? 'Tambah ke Google Calendar' : 'Add to Google Calendar'}
+                    </motion.a>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleDownloadICS}
+                      className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                    >
+                      <span>🍎</span> {language === 'id' ? 'Tambah ke Apple Calendar' : 'Add to Apple Calendar'}
+                    </motion.button>
+                  </div>
+                </motion.div>
               );
             })()}
 
-            
+
             {event.location && (
               <div className="mt-6 h-48 rounded-2xl bg-zinc-100 dark:bg-zinc-800 overflow-hidden border border-zinc-200 dark:border-zinc-700 relative group cursor-pointer" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location!)}`, '_blank')}>
                 <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?auto=format&fit=crop&q=80&w=800')] bg-cover group-hover:scale-105 transition-transform duration-500"></div>
@@ -1319,8 +1319,8 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
                   return (
                     <div key={i} className={cn(
                       "flex flex-col gap-3 p-3 rounded-xl border transition-all",
-                      isConfirmed 
-                        ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30" 
+                      isConfirmed
+                        ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30"
                         : "bg-violet-50 dark:bg-violet-500/10 border-violet-100 dark:border-violet-500/20"
                     )}>
                       <div className="flex items-center justify-between">
@@ -1332,7 +1332,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
                           {count} {language === 'id' ? 'Orang' : 'People'}
                         </div>
                       </div>
-                      
+
                       {!event.confirmedSlot && event.role === 'host' && (
                         <button
                           onClick={() => handleConfirmSlot(slotId)}
@@ -1341,7 +1341,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
                           {t.confirmSlot}
                         </button>
                       )}
-                      
+
                       {isConfirmed && (
                         <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1 py-1 bg-emerald-100/50 dark:bg-emerald-500/10 rounded-lg">
                           <CheckCircle size={12} /> {t.confirmed}
@@ -1361,7 +1361,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
             <p className="text-indigo-100 dark:text-indigo-50 text-xs mb-4">{t.inviteFriends}</p>
             <div className="bg-white/10 rounded-xl p-3 flex items-center justify-between gap-2">
               <span className="text-xs truncate opacity-80">{window.location.origin}/event/{event.id}</span>
-              <button 
+              <button
                 onClick={handleCopyLink}
                 className="bg-white text-indigo-600 dark:text-indigo-500 px-3 py-1 rounded-lg text-xs font-bold transition-colors hover:bg-indigo-50"
               >
@@ -1376,8 +1376,8 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
                 onClick={() => onUpdateEvent({ ...event, status: event.status === 'cancelled' ? 'active' : 'cancelled' })}
                 className={cn(
                   "w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2",
-                  event.status === 'cancelled' 
-                    ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-100 dark:shadow-none" 
+                  event.status === 'cancelled'
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-100 dark:shadow-none"
                     : "text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 border border-red-100 dark:border-red-500/20"
                 )}
               >
@@ -1414,7 +1414,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
           <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800 p-4 sm:p-6 shadow-sm overflow-x-auto">
             <div className="min-w-max">
               {/* Header Row */}
-              <div 
+              <div
                 className="grid gap-2 mb-4"
                 style={{ gridTemplateColumns: `minmax(50px, auto) repeat(${event.dates.length}, minmax(60px, 1fr))` }}
               >
@@ -1430,8 +1430,8 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
               {/* Grid Body */}
               <div className="space-y-2">
                 {times.map((time, i) => (
-                  <div 
-                    key={i} 
+                  <div
+                    key={i}
                     className="grid gap-2 items-center"
                     style={{ gridTemplateColumns: `minmax(50px, auto) repeat(${event.dates.length}, minmax(60px, 1fr))` }}
                   >
@@ -1476,7 +1476,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
                               <span className="text-[8px] font-black text-amber-900">!</span>
                             </div>
                           )}
-                          
+
                           {viewMode === 'heatmap' && hoveredSlot === slotId && (
                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 px-3 py-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[10px] rounded-xl shadow-2xl z-50 pointer-events-none min-w-[120px]">
                               <div className="font-bold mb-1">{heatmapCount} {t.peopleCan}</div>
@@ -1490,12 +1490,12 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
                           )}
 
                           {viewMode === 'heatmap' && !event.confirmedSlot && hoveredSlot === slotId && heatmapCount > 0 && event.role === 'host' && (
-                            <div 
+                            <div
                               className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-[60] flex flex-col items-center"
                               onMouseEnter={() => setHoveredSlot(slotId)}
                             >
                               <div className="w-0 h-0 border-8 border-transparent border-b-emerald-600" />
-                              <button 
+                              <button
                                 onClick={(e) => { e.stopPropagation(); handleConfirmSlot(slotId); }}
                                 className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-2xl whitespace-nowrap hover:bg-emerald-700 transition-all transform active:scale-95"
                               >
@@ -1541,17 +1541,17 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
   );
 };
 
-export const Dashboard = ({ 
-  myEvents, 
-  joinedEvents, 
-  onSelectEvent, 
+export const Dashboard = ({
+  myEvents,
+  joinedEvents,
+  onSelectEvent,
   onCreateNew,
   onDeleteEvent,
   onEditEvent,
   language
-}: { 
-  myEvents: NgumpulEvent[], 
-  joinedEvents: NgumpulEvent[], 
+}: {
+  myEvents: NgumpulEvent[],
+  joinedEvents: NgumpulEvent[],
   onSelectEvent: (e: NgumpulEvent) => void,
   onCreateNew: () => void,
   onDeleteEvent: (id: string) => void,
@@ -1595,7 +1595,7 @@ export const Dashboard = ({
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">{t.title}</h2>
-            <button 
+            <button
               onClick={async () => {
                 const { requestNotificationPermission, addToast } = useAppContext();
                 const granted = await requestNotificationPermission();
@@ -1627,7 +1627,7 @@ export const Dashboard = ({
           <p className="text-zinc-400 dark:text-zinc-500 text-sm mt-1">{t.emptyDesc}</p>
         </div>
       ) : (
-        <motion.div 
+        <motion.div
           variants={{
             hidden: { opacity: 0 },
             show: {
@@ -1642,8 +1642,8 @@ export const Dashboard = ({
           className="grid grid-cols-1 md:grid-cols-2 gap-6"
         >
           {allEvents.map((event) => {
-            const isPast = new Date(event.dates[event.dates.length - 1]) < new Date(new Date().setHours(0,0,0,0));
-            
+            const isPast = new Date(event.dates[event.dates.length - 1]) < new Date(new Date().setHours(0, 0, 0, 0));
+
             return (
               <motion.div
                 key={event.id}
@@ -1673,16 +1673,16 @@ export const Dashboard = ({
                   )}
                   <div className="flex items-center gap-2">
                     {event.role === 'host' && (
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); onEditEvent(event); }} 
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onEditEvent(event); }}
                         className="text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 p-1.5 rounded-lg transition-colors"
                         title={language === 'id' ? 'Edit Event' : 'Edit Event'}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
                       </button>
                     )}
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setEventToDelete(event.id); }} 
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEventToDelete(event.id); }}
                       className="text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 p-1.5 rounded-lg transition-colors"
                       title={language === 'id' ? 'Hapus Event' : 'Delete Event'}
                     >
@@ -1820,13 +1820,13 @@ const Login = ({ onLogin, language }: { onLogin: (user: UserProfile) => void, la
         className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800 p-6 sm:p-8 shadow-xl"
       >
         <div className="flex gap-4 mb-8 border-b border-zinc-100 dark:border-zinc-800 pb-4">
-          <button 
+          <button
             onClick={() => setIsSignUp(false)}
             className={cn("text-lg font-bold transition-colors", !isSignUp ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-400 dark:text-zinc-500")}
           >
             {t.login}
           </button>
-          <button 
+          <button
             onClick={() => setIsSignUp(true)}
             className={cn("text-lg font-bold transition-colors", isSignUp ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-400 dark:text-zinc-500")}
           >
@@ -1842,7 +1842,7 @@ const Login = ({ onLogin, language }: { onLogin: (user: UserProfile) => void, la
               <input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="nama@email.com" className="w-full pl-12 pr-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" />
             </div>
           </div>
-          
+
           {isSignUp && (
             <div>
               <label className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">{t.authCodeLabel}</label>
@@ -1928,10 +1928,10 @@ const Profile = ({ user, onSave, onLogout, language }: { user: UserProfile, onSa
                 <Camera size={14} />
               </button>
             </div>
-            <input 
-              type="text" 
-              value={photoUrl} 
-              onChange={e => setPhotoUrl(e.target.value)} 
+            <input
+              type="text"
+              value={photoUrl}
+              onChange={e => setPhotoUrl(e.target.value)}
               placeholder={t.photoUrlPlaceholder}
               className="w-full px-4 py-2 text-sm rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-center"
             />
@@ -1969,10 +1969,10 @@ const GenericPage = ({ title, subtitle, children, onNavigate, language }: { titl
 );
 
 const FeaturesPage = ({ onNavigate, language }: { onNavigate: (v: string) => void, language: 'en' | 'id' }) => (
-  <GenericPage 
-    title={language === 'id' ? 'Fitur' : 'Features'} 
-    subtitle={language === 'id' ? 'Semua yang Anda butuhkan untuk mengatur kumpul-kumpul yang sempurna.' : 'Everything you need to organize the perfect gathering.'} 
-    onNavigate={onNavigate} 
+  <GenericPage
+    title={language === 'id' ? 'Fitur' : 'Features'}
+    subtitle={language === 'id' ? 'Semua yang Anda butuhkan untuk mengatur kumpul-kumpul yang sempurna.' : 'Everything you need to organize the perfect gathering.'}
+    onNavigate={onNavigate}
     language={language}
   >
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
@@ -1997,10 +1997,10 @@ const FeaturesPage = ({ onNavigate, language }: { onNavigate: (v: string) => voi
 );
 
 const IntegrationsPage = ({ onNavigate, language }: { onNavigate: (v: string) => void, language: 'en' | 'id' }) => (
-  <GenericPage 
-    title={language === 'id' ? 'Integrasi' : 'Integrations'} 
-    subtitle={language === 'id' ? 'Hubungkan Ngumpul dengan alat favorit Anda.' : 'Connect Ngumpul with your favorite tools.'} 
-    onNavigate={onNavigate} 
+  <GenericPage
+    title={language === 'id' ? 'Integrasi' : 'Integrations'}
+    subtitle={language === 'id' ? 'Hubungkan Ngumpul dengan alat favorit Anda.' : 'Connect Ngumpul with your favorite tools.'}
+    onNavigate={onNavigate}
     language={language}
   >
     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8 text-center">
@@ -2014,10 +2014,10 @@ const IntegrationsPage = ({ onNavigate, language }: { onNavigate: (v: string) =>
 );
 
 const EnterprisePage = ({ onNavigate, language }: { onNavigate: (v: string) => void, language: 'en' | 'id' }) => (
-  <GenericPage 
-    title={language === 'id' ? 'Perusahaan' : 'Enterprise'} 
-    subtitle={language === 'id' ? 'Tingkatkan penjadwalan tim Anda dengan keamanan dan kontrol lanjutan.' : 'Scale your team\'s scheduling with advanced security and controls.'} 
-    onNavigate={onNavigate} 
+  <GenericPage
+    title={language === 'id' ? 'Perusahaan' : 'Enterprise'}
+    subtitle={language === 'id' ? 'Tingkatkan penjadwalan tim Anda dengan keamanan dan kontrol lanjutan.' : 'Scale your team\'s scheduling with advanced security and controls.'}
+    onNavigate={onNavigate}
     language={language}
   >
     <ul className="space-y-4 list-disc pl-6">
@@ -2030,10 +2030,10 @@ const EnterprisePage = ({ onNavigate, language }: { onNavigate: (v: string) => v
 );
 
 const PricingPage = ({ onNavigate, language }: { onNavigate: (v: string) => void, language: 'en' | 'id' }) => (
-  <GenericPage 
-    title={language === 'id' ? 'Harga' : 'Pricing'} 
-    subtitle={language === 'id' ? 'Harga yang sederhana dan transparan untuk semua orang.' : 'Simple, transparent pricing for everyone.'} 
-    onNavigate={onNavigate} 
+  <GenericPage
+    title={language === 'id' ? 'Harga' : 'Pricing'}
+    subtitle={language === 'id' ? 'Harga yang sederhana dan transparan untuk semua orang.' : 'Simple, transparent pricing for everyone.'}
+    onNavigate={onNavigate}
     language={language}
   >
     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
@@ -2073,10 +2073,10 @@ const PricingPage = ({ onNavigate, language }: { onNavigate: (v: string) => void
 );
 
 const AboutPage = ({ onNavigate, language }: { onNavigate: (v: string) => void, language: 'en' | 'id' }) => (
-  <GenericPage 
-    title={language === 'id' ? 'Tentang Kami' : 'About Us'} 
-    subtitle={language === 'id' ? 'Kami adalah The Fluid Collective.' : 'We are The Fluid Collective.'} 
-    onNavigate={onNavigate} 
+  <GenericPage
+    title={language === 'id' ? 'Tentang Kami' : 'About Us'}
+    subtitle={language === 'id' ? 'Kami adalah The Fluid Collective.' : 'We are The Fluid Collective.'}
+    onNavigate={onNavigate}
     language={language}
   >
     <p className="mb-4">{language === 'id' ? 'Ngumpul lahir dari rasa frustrasi yang sederhana: mengapa sangat sulit menemukan waktu yang cocok untuk semua orang?' : 'Ngumpul was born out of a simple frustration: why is it so hard to find a time that works for everyone?'}</p>
@@ -2086,10 +2086,10 @@ const AboutPage = ({ onNavigate, language }: { onNavigate: (v: string) => void, 
 );
 
 const CareersPage = ({ onNavigate, language }: { onNavigate: (v: string) => void, language: 'en' | 'id' }) => (
-  <GenericPage 
-    title={language === 'id' ? 'Karir' : 'Careers'} 
-    subtitle={language === 'id' ? 'Bergabunglah dengan kami untuk membuat kumpul-kumpul lebih mudah.' : 'Join us in making gatherings easier.'} 
-    onNavigate={onNavigate} 
+  <GenericPage
+    title={language === 'id' ? 'Karir' : 'Careers'}
+    subtitle={language === 'id' ? 'Bergabunglah dengan kami untuk membuat kumpul-kumpul lebih mudah.' : 'Join us in making gatherings easier.'}
+    onNavigate={onNavigate}
     language={language}
   >
     <div className="space-y-6 mt-8">
@@ -2112,10 +2112,10 @@ const CareersPage = ({ onNavigate, language }: { onNavigate: (v: string) => void
 );
 
 const JournalPage = ({ onNavigate, language }: { onNavigate: (v: string) => void, language: 'en' | 'id' }) => (
-  <GenericPage 
-    title={language === 'id' ? 'Jurnal' : 'Journal'} 
-    subtitle={language === 'id' ? 'Pemikiran tentang produktivitas, desain, dan menyatukan orang-orang.' : 'Thoughts on productivity, design, and bringing people together.'} 
-    onNavigate={onNavigate} 
+  <GenericPage
+    title={language === 'id' ? 'Jurnal' : 'Journal'}
+    subtitle={language === 'id' ? 'Pemikiran tentang produktivitas, desain, dan menyatukan orang-orang.' : 'Thoughts on productivity, design, and bringing people together.'}
+    onNavigate={onNavigate}
     language={language}
   >
     <div className="space-y-8 mt-8">
@@ -2136,10 +2136,10 @@ const JournalPage = ({ onNavigate, language }: { onNavigate: (v: string) => void
 );
 
 const ContactPage = ({ onNavigate, language }: { onNavigate: (v: string) => void, language: 'en' | 'id' }) => (
-  <GenericPage 
-    title={language === 'id' ? 'Kontak' : 'Contact'} 
-    subtitle={language === 'id' ? 'Kami ingin mendengar dari Anda.' : 'We\'d love to hear from you.'} 
-    onNavigate={onNavigate} 
+  <GenericPage
+    title={language === 'id' ? 'Kontak' : 'Contact'}
+    subtitle={language === 'id' ? 'Kami ingin mendengar dari Anda.' : 'We\'d love to hear from you.'}
+    onNavigate={onNavigate}
     language={language}
   >
     <form className="max-w-xl space-y-6 mt-8" onSubmit={(e) => e.preventDefault()}>
@@ -2161,10 +2161,10 @@ const ContactPage = ({ onNavigate, language }: { onNavigate: (v: string) => void
 );
 
 const PrivacyPage = ({ onNavigate, language }: { onNavigate: (v: string) => void, language: 'en' | 'id' }) => (
-  <GenericPage 
-    title={language === 'id' ? 'Kebijakan Privasi' : 'Privacy Policy'} 
-    subtitle={language === 'id' ? 'Terakhir diperbarui: Oktober 2024' : 'Last updated: October 2024'} 
-    onNavigate={onNavigate} 
+  <GenericPage
+    title={language === 'id' ? 'Kebijakan Privasi' : 'Privacy Policy'}
+    subtitle={language === 'id' ? 'Terakhir diperbarui: Oktober 2024' : 'Last updated: October 2024'}
+    onNavigate={onNavigate}
     language={language}
   >
     <h3 className="text-xl font-bold text-zinc-900 dark:text-white mt-8 mb-4">{language === 'id' ? '1. Informasi yang Kami Kumpulkan' : '1. Information We Collect'}</h3>
@@ -2177,10 +2177,10 @@ const PrivacyPage = ({ onNavigate, language }: { onNavigate: (v: string) => void
 );
 
 const TermsPage = ({ onNavigate, language }: { onNavigate: (v: string) => void, language: 'en' | 'id' }) => (
-  <GenericPage 
-    title={language === 'id' ? 'Syarat Ketentuan' : 'Terms of Service'} 
-    subtitle={language === 'id' ? 'Terakhir diperbarui: Oktober 2024' : 'Last updated: October 2024'} 
-    onNavigate={onNavigate} 
+  <GenericPage
+    title={language === 'id' ? 'Syarat Ketentuan' : 'Terms of Service'}
+    subtitle={language === 'id' ? 'Terakhir diperbarui: Oktober 2024' : 'Last updated: October 2024'}
+    onNavigate={onNavigate}
     language={language}
   >
     <h3 className="text-xl font-bold text-zinc-900 dark:text-white mt-8 mb-4">{language === 'id' ? '1. Penerimaan Syarat' : '1. Acceptance of Terms'}</h3>
@@ -2193,10 +2193,10 @@ const TermsPage = ({ onNavigate, language }: { onNavigate: (v: string) => void, 
 );
 
 const CalendarPage = ({ onNavigate, language }: { onNavigate: (v: string) => void, language: 'en' | 'id' }) => (
-  <GenericPage 
-    title={language === 'id' ? 'Kalender' : 'Calendar'} 
-    subtitle={language === 'id' ? 'Kelola semua acara Anda di satu tempat.' : 'Manage all your events in one place.'} 
-    onNavigate={onNavigate} 
+  <GenericPage
+    title={language === 'id' ? 'Kalender' : 'Calendar'}
+    subtitle={language === 'id' ? 'Kelola semua acara Anda di satu tempat.' : 'Manage all your events in one place.'}
+    onNavigate={onNavigate}
     language={language}
   >
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -2270,7 +2270,7 @@ const CreateTeam = ({ onCreated, onCancel, language }: { onCreated: (team: Team)
       'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
       'bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20'
     ];
-    
+
     const newTeam: Team = {
       id: Math.random().toString(36).substr(2, 9),
       name,
@@ -2300,9 +2300,9 @@ const CreateTeam = ({ onCreated, onCancel, language }: { onCreated: (team: Team)
             <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">
               {language === 'id' ? 'Nama Tim' : 'Team Name'}
             </label>
-            <input 
-              required 
-              type="text" 
+            <input
+              required
+              type="text"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder={language === 'id' ? 'Contoh: Tim Desain' : 'e.g., Design Team'}
@@ -2314,7 +2314,7 @@ const CreateTeam = ({ onCreated, onCancel, language }: { onCreated: (team: Team)
             <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">
               {language === 'id' ? 'Deskripsi (Opsional)' : 'Description (Optional)'}
             </label>
-            <textarea 
+            <textarea
               value={desc}
               onChange={e => setDesc(e.target.value)}
               placeholder={language === 'id' ? 'Apa tujuan tim ini?' : 'What is the purpose of this team?'}
@@ -2322,7 +2322,7 @@ const CreateTeam = ({ onCreated, onCancel, language }: { onCreated: (team: Team)
             />
           </div>
 
-          <button 
+          <button
             type="submit"
             className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
           >
@@ -2352,7 +2352,7 @@ const TeamWorkspace = ({ team, teamEvents, onBack, onCreateEvent, onSelectEvent 
   };
   return (
     <section className="pt-32 pb-20 px-4 sm:px-6 max-w-5xl mx-auto">
-      <button 
+      <button
         onClick={onBack}
         className="mb-8 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors font-medium"
       >
@@ -2372,14 +2372,14 @@ const TeamWorkspace = ({ team, teamEvents, onBack, onCreateEvent, onSelectEvent 
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => setShowInviteModal(true)}
               className="bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-4 py-2 rounded-xl font-bold text-sm hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2"
             >
               <Users size={16} />
               {language === 'id' ? 'Undang' : 'Invite'}
             </button>
-            <button 
+            <button
               onClick={onCreateEvent}
               className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors flex items-center gap-2"
             >
@@ -2393,7 +2393,7 @@ const TeamWorkspace = ({ team, teamEvents, onBack, onCreateEvent, onSelectEvent 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">{language === 'id' ? 'Event Tim' : 'Team Events'}</h2>
-          
+
           <div className="grid grid-cols-1 gap-4">
             {teamEvents.length === 0 ? (
               <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800">
@@ -2403,7 +2403,7 @@ const TeamWorkspace = ({ team, teamEvents, onBack, onCreateEvent, onSelectEvent 
               </div>
             ) : (
               teamEvents.map((event) => (
-                <div 
+                <div
                   key={event.id}
                   onClick={() => onSelectEvent(event)}
                   className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 hover:shadow-md transition-all cursor-pointer flex items-center justify-between"
@@ -2434,7 +2434,7 @@ const TeamWorkspace = ({ team, teamEvents, onBack, onCreateEvent, onSelectEvent 
                 <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative bg-white dark:bg-zinc-900 rounded-3xl p-8 shadow-2xl max-w-md w-full border border-zinc-100 dark:border-zinc-800">
                   <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">{language === 'id' ? 'Undang Anggota Tim' : 'Invite Team Members'}</h3>
                   <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-6">{language === 'id' ? 'Masukkan email rekan tim Anda untuk bergabung ke ruang kerja ini.' : 'Enter your teammate\'s email to join this workspace.'}</p>
-                  
+
                   {invitedStatus ? (
                     <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 rounded-xl flex items-center justify-center gap-2 font-bold mb-4">
                       <CheckCircle size={20} />
@@ -2443,12 +2443,12 @@ const TeamWorkspace = ({ team, teamEvents, onBack, onCreateEvent, onSelectEvent 
                   ) : (
                     <form onSubmit={handleInvite} className="space-y-4">
                       <div>
-                        <input 
-                          required 
-                          type="email" 
+                        <input
+                          required
+                          type="email"
                           value={inviteEmail}
                           onChange={e => setInviteEmail(e.target.value)}
-                          placeholder="name@company.com" 
+                          placeholder="name@company.com"
                           className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-zinc-900 dark:text-white"
                         />
                       </div>
@@ -2516,28 +2516,28 @@ export const ToastContainer = ({ toasts }: { toasts: Toast[] }) => {
   );
 };
 
-const TeamsPage = ({ 
-  onNavigate, 
+const TeamsPage = ({
+  onNavigate,
   language,
   teams,
   onCreateTeam,
   onSelectTeam
-}: { 
-  onNavigate: (v: string) => void, 
+}: {
+  onNavigate: (v: string) => void,
   language: 'en' | 'id',
   teams: Team[],
   onCreateTeam: () => void,
   onSelectTeam: (team: Team) => void
 }) => (
-  <GenericPage 
-    title={language === 'id' ? 'Tim' : 'Teams'} 
-    subtitle={language === 'id' ? 'Berkolaborasi dan jadwalkan pertemuan dengan tim Anda.' : 'Collaborate and schedule with your team.'} 
-    onNavigate={onNavigate} 
+  <GenericPage
+    title={language === 'id' ? 'Tim' : 'Teams'}
+    subtitle={language === 'id' ? 'Berkolaborasi dan jadwalkan pertemuan dengan tim Anda.' : 'Collaborate and schedule with your team.'}
+    onNavigate={onNavigate}
     language={language}
   >
     <div className="flex justify-between items-center mb-8">
       <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">{language === 'id' ? 'Ruang Kerja Anda' : 'Your Workspaces'}</h2>
-      <button 
+      <button
         onClick={onCreateTeam}
         className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors flex items-center gap-2"
       >
@@ -2545,7 +2545,7 @@ const TeamsPage = ({
         {language === 'id' ? 'Buat Tim Baru' : 'Create New Team'}
       </button>
     </div>
-    
+
     {teams.length === 0 ? (
       <div className="text-center py-20 bg-white dark:bg-zinc-900 rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800">
         <Users className="mx-auto text-zinc-300 dark:text-zinc-600 mb-4" size={48} />
@@ -2555,8 +2555,8 @@ const TeamsPage = ({
     ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {teams.map((team, i) => (
-          <div 
-            key={team.id} 
+          <div
+            key={team.id}
             onClick={() => onSelectTeam(team)}
             className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800 p-6 hover:shadow-lg transition-all cursor-pointer group"
           >
@@ -2592,13 +2592,13 @@ export default function App() {
   const [view, setView] = useState<ViewState>('landing');
   const [currentEvent, setCurrentEvent] = useState<NgumpulEvent | null>(null);
   const [joinedEvents, setJoinedEvents] = useState<NgumpulEvent[]>([]);
-  const { 
-    teams, setTeams, 
-    currentUser, setCurrentUser, 
-    currentTeam, setCurrentTeam, 
-    toasts, addToast, 
-    language, setLanguage, 
-    myEvents, setMyEvents 
+  const {
+    teams, setTeams,
+    currentUser, setCurrentUser,
+    currentTeam, setCurrentTeam,
+    toasts, addToast,
+    language, setLanguage,
+    myEvents, setMyEvents
   } = useAppContext();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [showLangPopup, setShowLangPopup] = useState(false);
@@ -2706,13 +2706,13 @@ export default function App() {
     <div className="min-h-screen bg-[#FAFAFA] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans selection:bg-indigo-100 selection:text-indigo-900 transition-colors">
       <AnimatePresence>
         {showLangPopup && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -2720,15 +2720,15 @@ export default function App() {
             >
               <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Select Language</h2>
               <p className="text-zinc-500 dark:text-zinc-400 mb-8">Pilih bahasa / Choose your language</p>
-              
+
               <div className="space-y-3">
-                <button 
+                <button
                   onClick={() => handleSelectLanguage('id')}
                   className="w-full py-4 px-6 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors flex items-center justify-center gap-2"
                 >
                   <span className="text-xl">🇮🇩</span> Bahasa Indonesia
                 </button>
-                <button 
+                <button
                   onClick={() => handleSelectLanguage('en')}
                   className="w-full py-4 px-6 rounded-xl bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white font-bold hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors flex items-center justify-center gap-2"
                 >
@@ -2740,7 +2740,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <Navbar 
+      <Navbar
         view={view}
         onNavigate={(v) => setView(v as ViewState)}
         hasEvents={myEvents.length > 0 || joinedEvents.length > 0}
@@ -2781,13 +2781,13 @@ export default function App() {
         {view === 'create-team' && <motion.div key="create-team" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.25 }}><CreateTeam onCreated={handleCreateTeam} onCancel={() => setView('teams')} language={language} /></motion.div>}
         {view === 'team-workspace' && currentTeam && (
           <motion.div key="team-workspace" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-            <TeamWorkspace 
-              team={currentTeam} 
+            <TeamWorkspace
+              team={currentTeam}
               teamEvents={myEvents.filter(e => e.teamId === currentTeam.id)}
               onBack={() => {
                 setCurrentTeam(null);
                 setView('teams');
-              }} 
+              }}
               onCreateEvent={() => setView('create')}
               onSelectEvent={(e) => {
                 setCurrentEvent(e);
@@ -2804,11 +2804,11 @@ export default function App() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
           >
-            <CreateEvent 
+            <CreateEvent
               onSaved={(e) => {
                 handleCreateEvent(e);
-              }} 
-              language={language} 
+              }}
+              language={language}
               teamId={currentTeam?.id}
             />
           </motion.div>
@@ -2832,10 +2832,10 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
           >
-            <EventPage 
-              event={currentEvent} 
-              currentUser={currentUser} 
-              language={language} 
+            <EventPage
+              event={currentEvent}
+              currentUser={currentUser}
+              language={language}
               onUpdateEvent={(e) => {
                 if (myEvents.some(me => me.id === e.id)) {
                   handleUpdateEvent(e);
@@ -2843,7 +2843,7 @@ export default function App() {
                   setJoinedEvents(prev => prev.map(je => je.id === e.id ? e : je));
                   setCurrentEvent(e);
                 }
-              }} 
+              }}
             />
           </motion.div>
         )}
@@ -2869,8 +2869,8 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
           >
-            <Profile 
-              user={currentUser} 
+            <Profile
+              user={currentUser}
               onSave={(user) => {
                 setCurrentUser(user);
                 setView('dashboard');
@@ -2892,9 +2892,9 @@ export default function App() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.25 }}
           >
-            <Dashboard 
-              myEvents={myEvents.filter(e => !e.teamId)} 
-              joinedEvents={joinedEvents} 
+            <Dashboard
+              myEvents={myEvents.filter(e => !e.teamId)}
+              joinedEvents={joinedEvents}
               onSelectEvent={(e) => {
                 setCurrentEvent(e);
                 setView('event');

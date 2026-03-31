@@ -21,11 +21,11 @@ import { Loader } from "@/components/ui/Loader";
 import confetti from 'canvas-confetti';
 
 // ── Memoized Message List ──────────────────────────────────────────────────
-const ChatMessageList = React.memo(({ 
-  groupedMessages, 
-  currentUser, 
-  polls, 
-  t, 
+const ChatMessageList = React.memo(({
+  groupedMessages,
+  currentUser,
+  polls,
+  t,
   language,
   onFinalizePoll,
   onVote,
@@ -93,9 +93,9 @@ const ChatMessageList = React.memo(({
                         "rounded-2xl overflow-hidden p-1 shadow-sm",
                         isOwn ? "bg-indigo-600 rounded-tr-md" : "bg-zinc-100 dark:bg-zinc-800 rounded-tl-md"
                       )}>
-                        <img 
-                          src={msg.mediaUrl} 
-                          alt="Chat Attachment" 
+                        <img
+                          src={msg.mediaUrl}
+                          alt="Chat Attachment"
                           className="max-w-full sm:max-w-xs h-auto max-h-64 object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
                           loading="lazy"
                           onClick={() => onLightbox(msg.mediaUrl!)}
@@ -123,7 +123,7 @@ const ChatMessageList = React.memo(({
                       (() => {
                         const pollId = msg.mediaUrl || msg.content;
                         const poll = polls.find((p: any) => p.id === pollId);
-                        if (!poll) return <div className="text-sm italic text-zinc-500 px-3 py-2">Poll not found ({pollId?.substring(0,8)})</div>;
+                        if (!poll) return <div className="text-sm italic text-zinc-500 px-3 py-2">Poll not found ({pollId?.substring(0, 8)})</div>;
                         return (
                           <div className={cn("p-4 rounded-2xl w-64 shadow-sm border border-black/5 dark:border-white/5", isOwn ? "bg-indigo-600 text-white rounded-tr-md" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-tl-md")}>
                             <div className="flex items-center gap-2 mb-3">
@@ -145,14 +145,14 @@ const ChatMessageList = React.memo(({
                                     onClick={() => onVote(poll.id, idx)}
                                     className={cn(
                                       "w-full text-left relative overflow-hidden rounded-xl border transition-all active:scale-[0.98]",
-                                      isOwn 
+                                      isOwn
                                         ? (hasVoted ? "bg-white/20 border-white/30" : "bg-white/5 border-white/10 hover:bg-white/10")
                                         : (hasVoted ? "bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800" : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 hover:border-indigo-300 dark:hover:border-indigo-700")
                                     )}
                                   >
-                                    <div 
-                                      className={cn("absolute inset-0 transition-all duration-500", isOwn ? "bg-white/20" : "bg-indigo-500/10")} 
-                                      style={{ width: `${percent}%` }} 
+                                    <div
+                                      className={cn("absolute inset-0 transition-all duration-500", isOwn ? "bg-white/20" : "bg-indigo-500/10")}
+                                      style={{ width: `${percent}%` }}
                                     />
                                     <div className="relative px-3 py-2.5 flex items-center justify-between gap-2">
                                       <div className="flex items-center gap-2 min-w-0">
@@ -179,7 +179,7 @@ const ChatMessageList = React.memo(({
                                 )}
                               </div>
                               {isOwn && !poll.isFinalized && (
-                                <button 
+                                <button
                                   onClick={() => onFinalizePoll(poll.id)}
                                   className="px-2 py-1 rounded-md bg-white/20 hover:bg-white/30 text-[10px] font-bold transition-colors"
                                 >
@@ -211,20 +211,20 @@ const ChatMessageList = React.memo(({
                   </div>
                 </div>
                 <div className={cn("opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1", isOwn ? "flex-row-reverse" : "")}>
-                   <button 
+                  <button
                     onClick={(e) => {
                       const rect = e.currentTarget.getBoundingClientRect();
-                      setContextMenu({ 
-                        x: rect.left, 
-                        y: rect.top, 
-                        messageId: msg.id, 
-                        senderId: msg.senderId 
+                      setContextMenu({
+                        x: rect.left,
+                        y: rect.top,
+                        messageId: msg.id,
+                        senderId: msg.senderId
                       });
                     }}
                     className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-400"
-                   >
-                      <MoreVertical size={14} />
-                   </button>
+                  >
+                    <MoreVertical size={14} />
+                  </button>
                 </div>
               </motion.div>
             );
@@ -608,22 +608,22 @@ export default function ChatPage() {
         const data = await res.json();
         // If loading older messages, prepend them. Otherwise, set as initial messages.
         if (cursor) {
-           setMessages((prev) => [...data.messages, ...prev]);
+          setMessages((prev) => [...data.messages, ...prev]);
         } else {
-           setMessages(data.messages || []);
-           // Scroll to bottom on initial load
-           setTimeout(() => {
-             if (chatContainerRef.current) {
-               chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-             }
-           }, 100);
+          setMessages(data.messages || []);
+          // Scroll to bottom on initial load
+          setTimeout(() => {
+            if (chatContainerRef.current) {
+              chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+            }
+          }, 100);
         }
         setNextCursor(data.nextCursor || null);
         setHasMore(!!data.nextCursor);
       } else if (res.status === 403) {
-         // unauthorized (not a member of a private room)
-         addToast("Akses ditolak / Access Denied", "error");
-         setSelectedRoom(null);
+        // unauthorized (not a member of a private room)
+        addToast("Akses ditolak / Access Denied", "error");
+        setSelectedRoom(null);
       }
     } catch (err) {
       console.error("Failed to fetch messages:", err);
@@ -634,16 +634,16 @@ export default function ChatPage() {
 
   const loadMoreMessages = () => {
     if (!selectedRoom || !hasMore || loadingMore || !nextCursor) return;
-    
+
     // Save current scroll height to adjust after prepending
     const container = chatContainerRef.current;
     const oldScrollHeight = container?.scrollHeight || 0;
-    
+
     fetchMessages(selectedRoom.id, nextCursor).then(() => {
-       if (container) {
-          const newScrollHeight = container.scrollHeight;
-          container.scrollTop = newScrollHeight - oldScrollHeight;
-       }
+      if (container) {
+        const newScrollHeight = container.scrollHeight;
+        container.scrollTop = newScrollHeight - oldScrollHeight;
+      }
     });
   };
 
@@ -653,7 +653,7 @@ export default function ChatPage() {
     if (target.scrollTop === 0 && hasMore && !loadingMore) {
       loadMoreMessages();
     }
-    
+
     // Check if scrolled up more than 200px from the bottom
     const isScrolledUp = target.scrollHeight - target.scrollTop - target.clientHeight > 200;
     setShowScrollButton(isScrolledUp);
@@ -672,15 +672,15 @@ export default function ChatPage() {
 
 
   // ── Send message ──────────────────────────────────────────────────────────
-  const sendMessage = useCallback(async (overrideType?: 'text'|'image'|'sticker'|'emote'|'poll'|'location', overrideContent?: string, mediaUrl?: string) => {
+  const sendMessage = useCallback(async (overrideType?: 'text' | 'image' | 'sticker' | 'emote' | 'poll' | 'location', overrideContent?: string, mediaUrl?: string) => {
     if (!session || !currentUser) {
       setShowLoginGate(true);
       return;
     }
-    
+
     const type = overrideType || 'text';
     const contentToSend = overrideContent || newMessage;
-    
+
     if (!selectedRoom || sendingMessage) return;
     if (type === 'text' && !contentToSend.trim()) return;
 
@@ -689,8 +689,8 @@ export default function ChatPage() {
       const res = await fetch("/api/chat/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          roomId: selectedRoom.id, 
+        body: JSON.stringify({
+          roomId: selectedRoom.id,
           content: contentToSend.trim(),
           type,
           mediaUrl: mediaUrl || null
@@ -702,7 +702,7 @@ export default function ChatPage() {
         setNewMessage("");
         inputRef.current?.focus();
         setTimeout(() => scrollToBottom(), 50); // Ensure scroll happens after DOM update
-        
+
         // Broadcast via Supabase Realtime channel
         supabase.channel(`room:${selectedRoom.id}`).send({
           type: "broadcast",
@@ -772,13 +772,13 @@ export default function ChatPage() {
       if (file.size > 1024 * 1024) { // 1MB
         fileToUpload = await compressImage(file);
       }
-      
+
       const { url, error } = await uploadChatMedia(fileToUpload as File, selectedRoom.id);
       if (error || !url) {
         addToast(language === 'id' ? 'Gagal mengunggah media' : 'Failed to upload media', 'error');
         return;
       }
-      
+
       // Send image message once uploaded
       await sendMessage('image', 'Image', url);
     } catch {
@@ -796,7 +796,7 @@ export default function ChatPage() {
     setShowEmojiPicker(false);
     setShowAttachments(false);
   };
-  
+
   // ── Create room ───────────────────────────────────────────────────────────
   const createRoom = async () => {
     if (!session) {
@@ -902,7 +902,7 @@ export default function ChatPage() {
         setEditingMessage(null);
         setEditContent("");
         addToast(language === 'id' ? 'Pesan diperbarui' : 'Message updated', 'success');
-        
+
         // Broadcast update
         supabase.channel(`room:${selectedRoom!.id}`).send({
           type: "broadcast",
@@ -918,12 +918,12 @@ export default function ChatPage() {
   const handleDeleteMessage = async (messageId: string) => {
     const msg = messages.find(m => m.id === messageId);
     if (!msg) return;
-    
+
     // Check 5-minute limit (unless admin)
     const isAdmin = roomMembers.find(m => m.userId === currentUser?.id)?.role === 'ADMIN';
     const isOwn = msg.senderId === currentUser?.id;
     const isWithin5Mins = Date.now() - new Date(msg.createdAt).getTime() < 5 * 60 * 1000;
-    
+
     if (!isAdmin && isOwn && !isWithin5Mins) {
       addToast(language === 'id' ? 'Pesan tidak bisa dihapus setelah 5 menit' : 'Messages cannot be deleted after 5 minutes', 'error');
       return;
@@ -1010,7 +1010,7 @@ export default function ChatPage() {
       });
       if (res.ok) {
         addToast(
-          action === 'approve' 
+          action === 'approve'
             ? (language === 'id' ? 'Permintaan disetujui' : 'Request approved')
             : (language === 'id' ? 'Permintaan ditolak' : 'Request rejected'),
           "success"
@@ -1050,7 +1050,7 @@ export default function ChatPage() {
     if (chatContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
       const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
-      
+
       if (isNearBottom) {
         chatContainerRef.current.scrollTo({
           top: scrollHeight,
@@ -1080,14 +1080,14 @@ export default function ChatPage() {
         // Avoid duplicating own messages (already added optimistically)
         setMessages((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;
-          
+
           // If the user is scrolled up, increment unread count
           if (chatContainerRef.current) {
             const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
             const isScrolledUp = scrollHeight - scrollTop - clientHeight > 200;
             if (isScrolledUp) setUnreadCount(c => c + 1);
           }
-          
+
           return [...prev, msg];
         });
       })
@@ -1098,12 +1098,12 @@ export default function ChatPage() {
       .on("broadcast", { event: "typing" }, (payload) => {
         const { user } = payload.payload;
         if (user.id === currentUser?.id) return;
-        
+
         setTypingUsers((prev) => {
           if (prev.some(u => u.id === user.id)) return prev;
           return [...prev, user];
         });
-        
+
         // Remove after 3 seconds of no typing event
         setTimeout(() => {
           setTypingUsers((prev) => prev.filter(u => u.id !== user.id));
@@ -1460,7 +1460,7 @@ export default function ChatPage() {
                         </div>
                         {/* Pin Toggle Button */}
                         {!isSelected && (
-                          <div 
+                          <div
                             onClick={(e) => { e.stopPropagation(); handlePinRoom(room.id, !isPinned); }}
                             className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-opacity"
                           >
@@ -1519,22 +1519,22 @@ export default function ChatPage() {
                         >
                           <div className="flex -space-x-1.5 overflow-hidden">
                             {typingUsers.map(user => (
-                              <img 
-                                key={user.id} 
-                                src={user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} 
-                                className="w-3.5 h-3.5 rounded-full border border-white dark:border-zinc-950 object-cover" 
-                                alt={user.name} 
+                              <img
+                                key={user.id}
+                                src={user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
+                                className="w-3.5 h-3.5 rounded-full border border-white dark:border-zinc-950 object-cover"
+                                alt={user.name}
                               />
                             ))}
                           </div>
                           <p className="text-[10px] font-bold text-indigo-500 animate-pulse uppercase tracking-wider">
-                            {typingUsers.length === 1 
+                            {typingUsers.length === 1
                               ? `${typingUsers[0].name.split(' ')[0]} ${language === 'id' ? 'sedang mengetik...' : 'is typing...'}`
                               : `${typingUsers.length} ${language === 'id' ? 'orang mengetik...' : 'people typing...'}`}
                           </p>
                         </motion.div>
                       ) : selectedRoom.description ? (
-                        <motion.p 
+                        <motion.p
                           key="desc"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
@@ -1638,9 +1638,9 @@ export default function ChatPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
-                          {latestMedia.type === 'image' ? (language === 'id' ? 'FOTO TERBARU' : 'LATEST PHOTO') : 
-                           latestMedia.type === 'location' ? (language === 'id' ? 'LOKASI TERBARU' : 'LATEST LOCATION') : 
-                           (language === 'id' ? 'POLLING TERBARU' : 'LATEST POLL')}
+                          {latestMedia.type === 'image' ? (language === 'id' ? 'FOTO TERBARU' : 'LATEST PHOTO') :
+                            latestMedia.type === 'location' ? (language === 'id' ? 'LOKASI TERBARU' : 'LATEST LOCATION') :
+                              (language === 'id' ? 'POLLING TERBARU' : 'LATEST POLL')}
                         </p>
                         <p className="text-xs text-zinc-500 truncate">
                           {latestMedia.type === 'poll' ? latestMedia.content : (latestMedia.mediaUrl || (language === 'id' ? 'Ketuk untuk melihat' : 'Tap to view'))}
@@ -1654,150 +1654,150 @@ export default function ChatPage() {
 
               <div className="flex-1 flex overflow-hidden">
                 {/* Message Feed */}
-              <div
-                ref={chatContainerRef}
-                onScroll={handleScroll}
-                className="flex-1 overflow-y-auto px-4 py-4 space-y-1 relative"
-              >
-                {/* Visual loading feedback while sending */}
-                <AnimatePresence>
-                  {(sendingMessage || uploadingMedia) && (
-                     <motion.div 
+                <div
+                  ref={chatContainerRef}
+                  onScroll={handleScroll}
+                  className="flex-1 overflow-y-auto px-4 py-4 space-y-1 relative"
+                >
+                  {/* Visual loading feedback while sending */}
+                  <AnimatePresence>
+                    {(sendingMessage || uploadingMedia) && (
+                      <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="absolute inset-x-0 bottom-4 flex justify-center z-10 pointer-events-none"
-                     >
+                      >
                         <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur rounded-full px-4 py-2 shadow-sm border border-zinc-200 dark:border-zinc-800 flex items-center gap-2">
-                           <Loader2 size={14} className="animate-spin text-indigo-500" />
-                           <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                             {uploadingMedia ? (language === 'id' ? 'Mengunggah...' : 'Uploading...') : (language === 'id' ? 'Mengirim...' : 'Sending...')}
-                           </span>
-                        </div>
-                     </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Loading older messages indicator */}
-                {loadingMore && (
-                  <div className="flex justify-center py-4">
-                     <Loader2 size={20} className="animate-spin text-indigo-400" />
-                  </div>
-                )}
-                {messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center py-20">
-                    <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center mb-4">
-                      <MessageCircle size={28} className="text-indigo-400" />
-                    </div>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">{t.noMessages}</p>
-                  </div>
-                ) : (
-                  <ChatMessageList 
-                    groupedMessages={groupedMessages} 
-                    currentUser={currentUser} 
-                    polls={polls} 
-                    t={t} 
-                    language={language}
-                    onFinalizePoll={handleFinalizePoll}
-                    onVote={handleVote}
-                    onReport={reportMessage}
-                    onBlock={blockUser}
-                    onDelete={handleDeleteMessage}
-                    onEdit={(msg: any) => { setEditingMessage(msg); setEditContent(msg.content); }}
-                    onLightbox={(url: string) => setLightboxImage(url)}
-                    setContextMenu={setContextMenu}
-                    formatTime={formatTime}
-                  />
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Online Users Panel (desktop) */}
-              <AnimatePresence>
-                {showOnlinePanel && (
-                  <motion.div
-                    initial={{ width: 0, opacity: 0 }}
-                    animate={{ width: 220, opacity: 1 }}
-                    exit={{ width: 0, opacity: 0 }}
-                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                    className="hidden lg:block border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 overflow-hidden"
-                  >
-                    <div className="p-4 border-b border-zinc-100 dark:border-zinc-800">
-                      <h4 className="font-bold text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">
-                        {t.onlineUsers} — {onlineUsers.length}
-                      </h4>
-                    </div>
-                    <div className="p-2 space-y-1 overflow-y-auto">
-                      {onlineUsers.map((user) => (
-                        <div
-                          key={user.id}
-                          className="flex items-center gap-2.5 px-3 py-2 rounded-lg"
-                        >
-                          <div className="relative shrink-0">
-                            <img
-                              src={user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
-                              alt={user.name}
-                              className="w-7 h-7 rounded-full object-cover"
-                            />
-                            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-zinc-950" />
-                          </div>
-                          <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate">
-                            {user.name}
+                          <Loader2 size={14} className="animate-spin text-indigo-500" />
+                          <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                            {uploadingMedia ? (language === 'id' ? 'Mengunggah...' : 'Uploading...') : (language === 'id' ? 'Mengirim...' : 'Sending...')}
                           </span>
                         </div>
-                      ))}
-                      {onlineUsers.length === 0 && (
-                        <p className="text-xs text-zinc-400 text-center py-4">
-                          {language === "id" ? "Tidak ada yang online" : "No one online"}
-                        </p>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-            {/* Message Input / Guest Banner */}
-            {/* Message Input / Guest Banner */}
-            {session && currentUser ? (
-              <ChatInputArea 
-                onSend={sendMessage} 
-                onFileUpload={handleFileUpload}
-                onEmote={sendEmote}
-                inputRef={inputRef}
-                fileInputRef={fileInputRef}
-                t={t}
-                language={language}
-                uploadingMedia={uploadingMedia}
-                showAttachments={showAttachments}
-                setShowAttachments={setShowAttachments}
-                showEmojiPicker={showEmojiPicker}
-                setShowEmojiPicker={setShowEmojiPicker}
-                onLocation={handleSendLocation}
-                onPoll={() => setShowPollModal(true)}
-              />
-            ) : (
-              <div className="border-t border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-indigo-50 via-white to-violet-50 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900 p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
-                      <LogIn size={18} />
+                  {/* Loading older messages indicator */}
+                  {loadingMore && (
+                    <div className="flex justify-center py-4">
+                      <Loader2 size={20} className="animate-spin text-indigo-400" />
                     </div>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">{t.guestBanner}</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      sessionStorage.setItem("ngumpul_redirect_after_login", "/chat");
-                      router.push("/login");
-                    }}
-                    className="shrink-0 px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors"
-                  >
-                    {t.signIn}
-                  </button>
+                  )}
+                  {messages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center py-20">
+                      <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center mb-4">
+                        <MessageCircle size={28} className="text-indigo-400" />
+                      </div>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400">{t.noMessages}</p>
+                    </div>
+                  ) : (
+                    <ChatMessageList
+                      groupedMessages={groupedMessages}
+                      currentUser={currentUser}
+                      polls={polls}
+                      t={t}
+                      language={language}
+                      onFinalizePoll={handleFinalizePoll}
+                      onVote={handleVote}
+                      onReport={reportMessage}
+                      onBlock={blockUser}
+                      onDelete={handleDeleteMessage}
+                      onEdit={(msg: any) => { setEditingMessage(msg); setEditContent(msg.content); }}
+                      onLightbox={(url: string) => setLightboxImage(url)}
+                      setContextMenu={setContextMenu}
+                      formatTime={formatTime}
+                    />
+                  )}
+                  <div ref={messagesEndRef} />
                 </div>
+
+                {/* Online Users Panel (desktop) */}
+                <AnimatePresence>
+                  {showOnlinePanel && (
+                    <motion.div
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: 220, opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
+                      transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                      className="hidden lg:block border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 overflow-hidden"
+                    >
+                      <div className="p-4 border-b border-zinc-100 dark:border-zinc-800">
+                        <h4 className="font-bold text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">
+                          {t.onlineUsers} — {onlineUsers.length}
+                        </h4>
+                      </div>
+                      <div className="p-2 space-y-1 overflow-y-auto">
+                        {onlineUsers.map((user) => (
+                          <div
+                            key={user.id}
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-lg"
+                          >
+                            <div className="relative shrink-0">
+                              <img
+                                src={user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
+                                alt={user.name}
+                                className="w-7 h-7 rounded-full object-cover"
+                              />
+                              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-zinc-950" />
+                            </div>
+                            <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate">
+                              {user.name}
+                            </span>
+                          </div>
+                        ))}
+                        {onlineUsers.length === 0 && (
+                          <p className="text-xs text-zinc-400 text-center py-4">
+                            {language === "id" ? "Tidak ada yang online" : "No one online"}
+                          </p>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            )}
-          </div>
+
+              {/* Message Input / Guest Banner */}
+              {/* Message Input / Guest Banner */}
+              {session && currentUser ? (
+                <ChatInputArea
+                  onSend={sendMessage}
+                  onFileUpload={handleFileUpload}
+                  onEmote={sendEmote}
+                  inputRef={inputRef}
+                  fileInputRef={fileInputRef}
+                  t={t}
+                  language={language}
+                  uploadingMedia={uploadingMedia}
+                  showAttachments={showAttachments}
+                  setShowAttachments={setShowAttachments}
+                  showEmojiPicker={showEmojiPicker}
+                  setShowEmojiPicker={setShowEmojiPicker}
+                  onLocation={handleSendLocation}
+                  onPoll={() => setShowPollModal(true)}
+                />
+              ) : (
+                <div className="border-t border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-indigo-50 via-white to-violet-50 dark:from-zinc-900 dark:via-zinc-950 dark:to-zinc-900 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                        <LogIn size={18} />
+                      </div>
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400">{t.guestBanner}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        sessionStorage.setItem("ngumpul_redirect_after_login", "/chat");
+                        router.push("/login");
+                      }}
+                      className="shrink-0 px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors"
+                    >
+                      {t.signIn}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         ) : (
           /* No room selected */
@@ -2278,8 +2278,8 @@ export default function ChatPage() {
                 </div>
 
                 <div className="mb-6 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
-                   <h4 className="font-bold text-zinc-900 dark:text-white mb-1">{selectedRoom.name}</h4>
-                   <p className="text-sm text-zinc-500">{selectedRoom.description || (language === 'id' ? 'Tidak ada deskripsi' : 'No description')}</p>
+                  <h4 className="font-bold text-zinc-900 dark:text-white mb-1">{selectedRoom.name}</h4>
+                  <p className="text-sm text-zinc-500">{selectedRoom.description || (language === 'id' ? 'Tidak ada deskripsi' : 'No description')}</p>
                 </div>
 
                 <div className="space-y-2 max-h-64 overflow-y-auto mb-6 pr-1">
@@ -2292,13 +2292,13 @@ export default function ChatPage() {
                           <img src={member.user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.user.name}`} alt={member.user.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
                           <div className="min-w-0">
                             <div className="font-bold text-sm text-zinc-900 dark:text-white truncate">
-                              {member.user.name} 
+                              {member.user.name}
                               {member.role === 'admin' && <span className="ml-2 text-[10px] uppercase font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded-md">Admin</span>}
                               {member.user.id === currentUser?.id && <span className="ml-2 text-[10px] uppercase font-bold text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded-md">You</span>}
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* Kick Button */}
                         {selectedRoom.createdById === currentUser?.id && member.user.id !== currentUser?.id && member.role !== 'admin' && (
                           <button
@@ -2398,7 +2398,7 @@ export default function ChatPage() {
             className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm"
             onClick={() => setLightboxImage(null)}
           >
-            <button 
+            <button
               className="absolute top-6 right-6 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition"
               onClick={() => setLightboxImage(null)}
             >

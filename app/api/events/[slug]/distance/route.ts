@@ -4,15 +4,15 @@ import { getDistanceMatrix } from "@/lib/maps";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { id: eventId } = await params;
+    const { slug } = await params;
 
     // 1. Fetch event destination
     const event = await prisma.event.findUnique({
-      where: { id: eventId },
-      select: { lat: true, lng: true, location_name: true }
+      where: { slug },
+      select: { id: true, lat: true, lng: true, location_name: true }
     });
 
     if (!event?.lat || !event?.lng) {
@@ -21,7 +21,7 @@ export async function GET(
 
     // 2. Fetch all participant origins
     const participants = await prisma.participantLocation.findMany({
-      where: { event_id: eventId },
+      where: { event_id: event.id },
       include: { participant: { select: { guest_name: true, user: { select: { name: true } } } } }
     });
 
