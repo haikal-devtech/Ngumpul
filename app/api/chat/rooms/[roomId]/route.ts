@@ -22,9 +22,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
 
-    if (room.createdById !== session.user.id) {
+    if ((room as any).createdById !== session.user.id) {
       return NextResponse.json({ error: "Forbidden - Room creators only" }, { status: 403 });
     }
+
 
     await deleteChatRoom(roomId);
 
