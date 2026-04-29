@@ -63,8 +63,9 @@ function JoinTeamContent() {
   };
 
   useEffect(() => {
-    // Wait for session to finish loading before processing
-    if (sessionStatus === "loading") return;
+    // Wait for auth to finish loading before processing
+    if (authLoading) return;
+
 
     // Already processed — don't run again
     if (processed) return;
