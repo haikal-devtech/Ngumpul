@@ -86,14 +86,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
     
-    const existingMember = room.members.find((m: any) => m.userId === session.user.id);
-    if (room.isPrivate && !existingMember) {
+    const existingMember = (room as any).members.find((m: any) => m.userId === session.user.id);
+    if ((room as any).isPrivate && !existingMember) {
       return NextResponse.json({ error: "Forbidden: Cannot send messages to a private room without joining" }, { status: 403 });
     }
 
-    if (!existingMember && !room.isPrivate) {
+    if (!existingMember && !(room as any).isPrivate) {
       await addChatMember(roomId, session.user.id);
     }
+
 
     const message = await createChatMessage({
       roomId,
