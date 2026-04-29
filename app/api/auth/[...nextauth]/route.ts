@@ -1,4 +1,11 @@
-import { handlers } from "@/auth";
+import { NextResponse } from "next/server";
 
-export const { GET, POST } = handlers;
+export async function GET() {
+  return NextResponse.json({ message: "Auth handled by Firebase" });
+}
+
+export async function POST() {
+  return NextResponse.json({ message: "Auth handled by Firebase" });
+}
+
 export const dynamic = "force-dynamic";
