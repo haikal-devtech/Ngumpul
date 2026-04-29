@@ -33,10 +33,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(user);
       if (user) {
         const token = await user.getIdToken();
-        document.cookie = `__session=${token}; path=/; samesite=strict; secure`;
+        document.cookie = `__session=${token}; path=/; samesite=lax; secure`;
       } else {
-        document.cookie = "__session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie = "__session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=lax; secure";
       }
+
       setLoading(false);
     });
 
