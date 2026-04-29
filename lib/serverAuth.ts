@@ -17,8 +17,8 @@ export async function getServerSession() {
       return null;
     }
 
-    // IMPORTANT: Use verifySessionCookie for the __session cookie, NOT verifyIdToken
-    const decodedToken = await auth.verifySessionCookie(sessionCookie, true);
+    // Since the client sets ID Token in __session cookie directly
+    const decodedToken = await auth.verifyIdToken(sessionCookie);
     
     return {
       user: {
@@ -29,7 +29,7 @@ export async function getServerSession() {
       },
     };
   } catch (error) {
-    console.error("DEBUG: Error verifying session cookie:", error);
+    console.error("DEBUG: Error verifying ID Token from cookie:", error);
     return null;
   }
 }
