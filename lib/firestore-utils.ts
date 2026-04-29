@@ -315,7 +315,7 @@ export const getBlockedUsers = async (blockerId: string) => {
   const blockedUsers = [];
   for (const blockDoc of snapshot.docs) {
     const blockedId = blockDoc.id;
-    const userProfile = await getUserProfile(blockedId);
+    const userProfile = (await getUserProfile(blockedId)) as any;
     blockedUsers.push({
       id: blockedId,
       name: userProfile?.name || "Unknown",
@@ -336,7 +336,7 @@ export const getChatPolls = async (roomId: string) => {
     const votesCol = collection(db, "chatRooms", roomId, "polls", pollDoc.id, "votes");
     const votesSnapshot = await getDocs(votesCol);
     const votes = votesSnapshot.docs.map(v => v.data());
-    const creator = await getUserProfile(pollData.createdById);
+    const creator = (await getUserProfile(pollData.createdById)) as any;
     polls.push({
       id: pollDoc.id,
       ...pollData,
@@ -385,7 +385,7 @@ export const getChatJoinRequests = async (roomId: string) => {
   const requests = [];
   for (const docSnap of snapshot.docs) {
     const data = docSnap.data();
-    const userProfile = await getUserProfile(docSnap.id); // Doc ID is userId
+    const userProfile = (await getUserProfile(docSnap.id)) as any; // Doc ID is userId
     requests.push({
       id: docSnap.id,
       ...data,
