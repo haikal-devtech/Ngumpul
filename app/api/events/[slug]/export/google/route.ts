@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEventBySlug, getUserProfile } from "@/lib/firestore-utils";
-import { auth } from "@/auth";
+import { getServerSession } from "@/lib/serverAuth";
 import { addToGoogleCalendar } from "@/lib/calendar";
 import { NgumpulEvent } from "@/lib/types";
 
@@ -9,10 +9,11 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
 
     const { slug } = await params;
 

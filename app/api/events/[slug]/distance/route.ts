@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEventBySlug, getParticipantLocations } from "@/lib/firestore-utils";
-import { auth } from "@/auth";
+import { getServerSession } from "@/lib/serverAuth";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { getDistanceMatrix } from "@/lib/maps";
 
@@ -9,10 +9,11 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
 
     const ip = getClientIp(req);
     const { success } = rateLimit(`distance:${ip}`, { limit: 5, windowMs: 60_000 });
