@@ -1356,40 +1356,19 @@ export default function ChatPage() {
 
   // Duplicate handleSendLocation removed
 
-  // ── Supabase Presence: online users ───────────────────────────────────────
+  // ── Firebase Presence Placeholder ─────────────────────────────────────────
+  /*
   useEffect(() => {
     if (!selectedRoom || !currentUser) return;
 
-    const presenceChannel = supabase.channel(`presence:${selectedRoom.id}`);
-
-    presenceChannel
-      .on("presence", { event: "sync" }, () => {
-        const state = presenceChannel.presenceState();
-        const users: OnlineUser[] = [];
-        Object.values(state).forEach((presences: any) => {
-          presences.forEach((p: any) => {
-            if (!users.some((u) => u.id === p.id)) {
-              users.push({ id: p.id, name: p.name, image: p.image, online_at: p.online_at });
-            }
-          });
-        });
-        setOnlineUsers(users);
-      })
-      .subscribe(async (status) => {
-        if (status === "SUBSCRIBED") {
-          await presenceChannel.track({
-            id: currentUser.id,
-            name: currentUser.name,
-            image: currentUser.photoUrl,
-            online_at: new Date().toISOString(),
-          });
-        }
-      });
-
+    // TODO: Implement Firebase Realtime Database Presence logic
+    
     return () => {
-      supabase.removeChannel(presenceChannel);
+      // Cleanup
     };
   }, [selectedRoom, currentUser]);
+  */
+
 
   // ── Close context menu on click outside ───────────────────────────────────
   useEffect(() => {
