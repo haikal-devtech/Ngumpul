@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation";
 import { useAppContext } from "@/components/AppContext";
 import { useAuth } from "@/hooks/useAuth";
-import { uploadChatMedia } from "@/lib/supabase";
+import { uploadChatMedia } from "@/lib/storage";
+
 
 import { ChatRoom, ChatMessage, OnlineUser } from "@/lib/types";
 import { motion, AnimatePresence } from "motion/react";
@@ -17,11 +18,11 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
-import { uploadChatMedia } from "@/lib/supabase";
 import { Loader } from "@/components/ui/Loader";
 import confetti from 'canvas-confetti';
 import { db } from "@/lib/firebase";
 import { collection, query, orderBy, limit, onSnapshot, where } from "firebase/firestore";
+
 
 
 

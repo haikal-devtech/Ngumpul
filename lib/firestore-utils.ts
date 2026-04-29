@@ -180,3 +180,20 @@ export const addChatMember = async (roomId: string, userId: string, role: string
     joinedAt: serverTimestamp(),
   });
 };
+
+export const updateUserProfile = async (userId: string, data: any) => {
+  const docRef = doc(db, "users", userId);
+  await setDoc(docRef, {
+    ...data,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+  return data;
+};
+
+export const getUserProfile = async (userId: string) => {
+  const docRef = doc(db, "users", userId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) return null;
+  return { id: docSnap.id, ...docSnap.data() };
+};
+

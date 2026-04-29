@@ -1,6 +1,6 @@
 "use server";
 import { auth } from "@/auth";
-import prisma from "@/lib/prisma";
+import { updateUserProfile, getUserProfile } from "@/lib/firestore-utils";
 import { revalidatePath } from "next/cache";
 
 export async function updateProfile(data: { name: string; bio: string }) {
@@ -10,19 +10,17 @@ export async function updateProfile(data: { name: string; bio: string }) {
   }
   
   try {
-    const updated = await prisma.user.update({
-      where: { id: session.user.id },
-      data: {
-        name: data.name,
-        bio: data.bio
-      }
+    await updateUserProfile(session.user.id, {
+      name: data.name,
+      bio: data.bio
     });
 
     revalidatePath("/profile");
     revalidatePath("/dashboard");
     
-    return { success: true, user: { name: updated.name, bio: updated.bio } };
+    return { success: true, user: { name: data.name, bio: data.bio } };
   } catch (error) {
+    console.error("Profile update error:", error);
     return { success: false, error: "Failed to update profile" };
   }
 }
@@ -33,10 +31,15 @@ export async function getProfile() {
     return null;
   }
   
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { id: true, name: true, image: true, bio: true, email: true }
-  });
+  const user = await getUserProfile(session.user.id);
+  if (!user) return null;
   
-  return user;
+  return {
+    id: user.id,
+    name: user.name,
+    image: user.image,
+    bio: user.bio,
+    email: user.email
+  };
 }
+
