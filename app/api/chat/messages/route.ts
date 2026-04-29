@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getServerSession } from "@/lib/serverAuth";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { 
   getChatRoom, 
@@ -27,8 +27,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
 
-    const session = await auth();
+    const session = await getServerSession();
     const userId = session?.user?.id;
+
 
     if ((room as any).isPrivate) {
       if (!userId) {
@@ -64,8 +65,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
     }
 
-    const session = await auth();
+    const session = await getServerSession();
     if (!session?.user?.id) {
+
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

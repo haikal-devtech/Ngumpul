@@ -1,62 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getServerSession } from "@/lib/serverAuth";
+import { 
+  getChatRoomByInviteCode, 
+  getChatMember, 
+  getChatJoinRequest, 
+  createChatJoinRequest, 
+  addChatMember 
+} from "@/lib/firestore-utils";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/chat/invite/[code] — Join a room via invite code
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ code: string }> }
 ) {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const resolvedParams = await params;
 
-    // Find room by invite code
-    const room = await prisma.chatRoom.findUnique({
-      where: { inviteCode: resolvedParams.code },
-    });
+    const room = await getChatRoomByInviteCode(resolvedParams.code);
 
     if (!room) {
       return NextResponse.json({ error: "Invalid invite code" }, { status: 404 });
     }
 
-    // Check if already a member
-    const existingMember = await prisma.chatMember.findUnique({
-      where: { roomId_userId: { roomId: room.id, userId: session.user.id } },
-    });
+    const existingMember = await getChatMember(room.id, session.user.id);
 
     if (!existingMember) {
-      if (room.requiresApproval) {
-        // Check if there is already a pending request
-        const existingRequest = await prisma.chatJoinRequest.findUnique({
-          where: { roomId_userId: { roomId: room.id, userId: session.user.id } },
-        });
+      if ((room as any).requiresApproval) {
+        const existingRequest = await getChatJoinRequest(room.id, session.user.id);
 
         if (!existingRequest) {
-          await prisma.chatJoinRequest.create({
-            data: {
-              roomId: room.id,
-              userId: session.user.id,
-              status: "pending",
-            },
-          });
+          await createChatJoinRequest(room.id, session.user.id);
         }
         return NextResponse.json({ roomId: room.id, requiresApproval: true, status: "pending" });
       } else {
-        // Add user to room directly
-        await prisma.chatMember.create({
-          data: {
-            roomId: room.id,
-            userId: session.user.id,
-            role: "member",
-          },
-        });
+        await addChatMember(room.id, session.user.id);
       }
     }
 
@@ -66,3 +49,4 @@ export async function POST(
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+

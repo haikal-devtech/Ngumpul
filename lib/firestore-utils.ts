@@ -219,8 +219,26 @@ export const getChatMember = async (roomId: string, userId: string) => {
 export const removeChatMember = async (roomId: string, userId: string) => {
   const docRef = doc(db, "chatRooms", roomId, "members", userId);
   await deleteDoc(docRef);
+};export const getChatRoomByInviteCode = async (inviteCode: string) => {
+  const roomsCol = collection(db, "chatRooms");
+  const q = query(roomsCol, where("inviteCode", "==", inviteCode), limit(1));
+  const querySnapshot = await getDocs(q);
+  if (querySnapshot.empty) return null;
+  const docSnap = querySnapshot.docs[0];
+  return { id: docSnap.id, ...docSnap.data() };
 };
 
+export const getChatJoinRequest = async (roomId: string, userId: string) => {
+  const docRef = doc(db, "chatRooms", roomId, "joinRequests", userId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) return null;
+  return { id: docSnap.id, ...docSnap.data() };
+};
 
-
-
+export const createChatJoinRequest = async (roomId: string, userId: string) => {
+  await setDoc(doc(db, "chatRooms", roomId, "joinRequests", userId), {
+    userId,
+    status: "pending",
+    createdAt: serverTimestamp(),
+  });
+};
