@@ -51,7 +51,7 @@ const securityHeaders = [
       // Fonts
       "font-src 'self' https://fonts.gstatic.com",
       // Images: self + Unsplash + DiceBear + Google
-      "img-src 'self' data: blob: https://images.unsplash.com https://api.dicebear.com https://lh3.googleusercontent.com",
+      "img-src 'self' data: blob: https://images.unsplash.com https://api.dicebear.com https://*.googleusercontent.com https://*.googleapis.com https://*.firebaseapp.com https://www.gstatic.com",
       // XHR / fetch: self + Google APIs + Firebase
       "connect-src 'self' https://maps.googleapis.com https://va.vercel-scripts.com https://*.googleapis.com https://*.firebaseio.com https://*.firebase.google.com https://*.firebasedataconnect.googleapis.com",
       // Frames: Google OAuth + Firebase Auth
