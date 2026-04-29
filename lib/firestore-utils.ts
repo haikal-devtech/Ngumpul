@@ -108,20 +108,25 @@ export const getChatRooms = async (userId?: string) => {
     q = query(chatRoomsCollection, orderBy("createdAt", "asc"));
   }
   
-  const querySnapshot = await getDocs(q);
-  const rooms = [];
-  for (const docSnapshot of querySnapshot.docs) {
-    const data = docSnapshot.data() as any;
-    if (data.isPrivate && userId) {
-
-      const memberRef = doc(db, "chatRooms", docSnapshot.id, "members", userId);
-      const memberDoc = await getDoc(memberRef);
-      if (!memberDoc.exists()) continue;
+  try {
+    const querySnapshot = await getDocs(q);
+    const rooms = [];
+    for (const docSnapshot of querySnapshot.docs) {
+      const data = docSnapshot.data() as any;
+      if (data.isPrivate && userId) {
+        const memberRef = doc(db, "chatRooms", docSnapshot.id, "members", userId);
+        const memberDoc = await getDoc(memberRef);
+        if (!memberDoc.exists()) continue;
+      }
+      rooms.push({ id: docSnapshot.id, ...data });
     }
-    rooms.push({ id: docSnapshot.id, ...data });
+    return rooms;
+  } catch (err: any) {
+    console.error("Firestore error in getChatRooms:", err);
+    throw err;
   }
-  return rooms;
 };
+
 
 export const createChatRoom = async (roomData: any, creatorId: string) => {
   const docRef = await addDoc(chatRoomsCollection, {
