@@ -1,0 +1,235 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id               String            @id @default(cuid())
+  name             String?
+  email            String?           @unique
+  emailVerified    DateTime?
+  image            String?
+  bio              String?
+  createdAt        DateTime          @default(now())
+  accounts         Account[]
+  blockedByUsers   BlockedUser[]     @relation("Blocked")
+  blockedUsers     BlockedUser[]     @relation("Blocker")
+  chatJoinRequests ChatJoinRequest[]
+  chatMemberships  ChatMember[]
+  chatMessages     ChatMessage[]
+  chatPolls        ChatPoll[]
+  pollVotes        ChatPollVote[]
+  createdRooms     ChatRoom[]        @relation("RoomCreator")
+  events           Event[]           @relation("HostEvents")
+  participants     Participant[]
+  reportedMessages ReportedMessage[]
+  sessions         Session[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Event {
+  id                    String                @id @default(cuid())
+  slug                  String                @unique
+  title                 String
+  desc                  String?
+  location_name         String?
+  location_address      String?
+  lat                   Float?
+  lng                   Float?
+  place_id              String?
+  host_id               String
+  date_range            String[]
+  time_range            String[]
+  timezone              String                @default("Asia/Jakarta")
+  deadline              DateTime?
+  confirmed_slot        String?
+  status                String                @default("active")
+  team_id               String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  availabilities        Availability[]
+  chatRooms             ChatRoom[]
+  host                  User                  @relation("HostEvents", fields: [host_id], references: [id], onDelete: Cascade)
+  participants          Participant[]
+  participant_locations ParticipantLocation[]
+}
+
+model Participant {
+  id             String                @id @default(cuid())
+  event_id       String
+  user_id        String?
+  guest_name     String?
+  token          String?               @unique
+  availabilities Availability[]
+  event          Event                 @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  user           User?                 @relation(fields: [user_id], references: [id])
+  locations      ParticipantLocation[]
+
+  @@unique([event_id, user_id])
+}
+
+model Availability {
+  id             String      @id @default(cuid())
+  participant_id String
+  event_id       String
+  slot_datetime  String
+  is_available   Boolean     @default(true)
+  event          Event       @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  participant    Participant @relation(fields: [participant_id], references: [id], onDelete: Cascade)
+
+  @@unique([participant_id, slot_datetime])
+}
+
+model ParticipantLocation {
+  id             String      @id @default(cuid())
+  participant_id String
+  event_id       String
+  location_name  String
+  lat            Float?
+  lng            Float?
+  event          Event       @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  participant    Participant @relation(fields: [participant_id], references: [id], onDelete: Cascade)
+}
+
+model ChatRoom {
+  id               String            @id @default(cuid())
+  name             String
+  description      String?
+  inviteCode       String?           @unique
+  type             String            @default("general")
+  isPrivate        Boolean           @default(false)
+  requiresApproval Boolean           @default(false)
+  eventId          String?
+  createdById      String
+  createdAt        DateTime          @default(now())
+  joinRequests     ChatJoinRequest[]
+  members          ChatMember[]
+  messages         ChatMessage[]
+  polls            ChatPoll[]
+  createdBy        User              @relation("RoomCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  event            Event?            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model ChatPoll {
+  id          String         @id @default(cuid())
+  roomId      String
+  question    String
+  options     String[]
+  createdById String
+  isFinalized Boolean @default(false)
+  createdAt   DateTime       @default(now())
+  createdBy   User           @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  room        ChatRoom       @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  votes       ChatPollVote[]
+}
+
+model ChatPollVote {
+  id          String   @id @default(cuid())
+  pollId      String
+  userId      String
+  optionIndex Int
+  createdAt   DateTime @default(now())
+  poll        ChatPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, userId])
+}
+
+model ChatMessage {
+  id        String            @id @default(cuid())
+  roomId    String
+  senderId  String
+  content   String
+  type      String            @default("text")
+  mediaUrl  String?
+  isDeleted Boolean           @default(false)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  room      ChatRoom          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender    User              @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  reports   ReportedMessage[]
+}
+
+model ChatMember {
+  id       String   @id @default(cuid())
+  roomId   String
+  userId   String
+   role     String   @default("member")
+  isPinned Boolean  @default(false)
+  joinedAt DateTime @default(now())
+  room     ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+}
+
+model ChatJoinRequest {
+  id        String   @id @default(cuid())
+  roomId    String
+  userId    String
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+}
+
+model BlockedUser {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+}
+
+model ReportedMessage {
+  id         String      @id @default(cuid())
+  messageId  String
+  reporterId String
+  reason     String
+  createdAt  DateTime    @default(now())
+  message    ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  reporter   User        @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+}

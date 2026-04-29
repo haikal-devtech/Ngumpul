@@ -1,0 +1,41 @@
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { auth } from "@/auth";
+
+export const dynamic = "force-dynamic";
+
+// DELETE /api/chat/rooms/[roomId] — admin-only delete room
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ roomId: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { roomId } = await params;
+
+    const room = await prisma.chatRoom.findUnique({
+      where: { id: roomId },
+    });
+
+    if (!room) {
+      return NextResponse.json({ error: "Room not found" }, { status: 404 });
+    }
+
+    if (room.createdById !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden - Room creators only" }, { status: 403 });
+    }
+
+    await prisma.chatRoom.delete({
+      where: { id: roomId },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Error deleting room:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
