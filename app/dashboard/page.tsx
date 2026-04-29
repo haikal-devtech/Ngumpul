@@ -1,31 +1,32 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { Dashboard } from "@/components/NgumpulApp";
 import { useRouter } from "next/navigation";
 import { useAppContext } from "@/components/AppContext";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user: authUser, loading: authLoading } = useAuth();
   const { language, myEvents, joinedEvents, setMyEvents, setJoinedEvents } = useAppContext();
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!authLoading && !authUser) {
       router.replace("/login");
     }
-  }, [status, router]);
+  }, [authLoading, authUser, router]);
 
-  // Show loading state while session is resolving — never render data before auth confirmed
-  if (status === "loading" || status === "unauthenticated" || !session) {
+  // Show loading state while auth is resolving
+  if (authLoading || !authUser) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
       </div>
     );
   }
+
 
   const handleSelectEvent = (event: any) => {
     router.push(`/event/${event.id}`);

@@ -1,15 +1,16 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { Shield, Loader2, AlertCircle, Hash, Users, Lock, UserPlus } from "lucide-react";
 import { useAppContext } from "@/components/AppContext";
 
 export default function InvitePage({ params }: { params: Promise<{ code: string }> }) {
-  const { data: session, status } = useSession();
+  const { user: authUser, loading: authLoading } = useAuth();
   const router = useRouter();
   const { language } = useAppContext();
+
   
   const [error, setError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
@@ -36,13 +37,14 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
   }, [resolvedParams.code, language]);
 
   const handleJoin = async () => {
-    if (status === "loading") return;
+    if (authLoading) return;
 
-    if (!session) {
+    if (!authUser) {
       sessionStorage.setItem("ngumpul_redirect_after_login", `/chat/invite/${resolvedParams.code}`);
       router.push("/login");
       return;
     }
+
 
     setJoining(true);
     try {
