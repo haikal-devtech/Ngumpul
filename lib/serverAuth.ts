@@ -7,6 +7,12 @@ export async function getServerSession() {
     const sessionCookie = cookieStore.get("__session")?.value;
 
     if (!sessionCookie) {
+      console.log("No __session cookie found in request");
+      return null;
+    }
+
+    if (!adminAuth) {
+      console.error("Firebase Admin Auth not initialized! Check FIREBASE_SERVICE_ACCOUNT_KEY");
       return null;
     }
 
@@ -24,3 +30,4 @@ export async function getServerSession() {
     return null;
   }
 }
+
