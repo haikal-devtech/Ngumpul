@@ -6,8 +6,7 @@ import {
   getReport, 
   addBlock, 
   getBlock, 
-  removeBlock,
-  adminDb
+  removeBlock
 } from "@/lib/firestore-utils";
 
 export const dynamic = "force-dynamic";
