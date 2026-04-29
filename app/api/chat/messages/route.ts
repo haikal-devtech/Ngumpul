@@ -30,15 +30,16 @@ export async function GET(req: NextRequest) {
     const session = await auth();
     const userId = session?.user?.id;
 
-    if (room.isPrivate) {
+    if ((room as any).isPrivate) {
       if (!userId) {
          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
-      const isMember = room.members.some((m: any) => m.userId === userId);
+      const isMember = (room as any).members.some((m: any) => m.userId === userId);
       if (!isMember) {
         return NextResponse.json({ error: "Forbidden: Not a member of this private room" }, { status: 403 });
       }
     }
+
 
     const messages = await getChatMessages(roomId, limitCount, cursor);
 
