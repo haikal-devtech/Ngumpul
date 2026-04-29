@@ -61,7 +61,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
 
-    const currentUserMember = await getChatMember(roomId, session.user.id);
+    const currentUserMember = (await getChatMember(roomId, session.user.id)) as any;
 
     if (!currentUserMember || (currentUserMember.role !== "admin" && currentUserMember.role !== "moderator")) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
@@ -71,7 +71,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden: Only admins can grant the admin role" }, { status: 403 });
     }
 
-    const targetMember = await getChatMember(roomId, targetUserId);
+    const targetMember = (await getChatMember(roomId, targetUserId)) as any;
 
     if (!targetMember) {
       return NextResponse.json({ error: "Target user is not a member of this room" }, { status: 404 });
@@ -107,7 +107,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
     }
 
-    const currentUserMember = await getChatMember(roomId, session.user.id);
+    const currentUserMember = (await getChatMember(roomId, session.user.id)) as any;
 
     if (!currentUserMember || (currentUserMember.role !== "admin" && currentUserMember.role !== "moderator")) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
