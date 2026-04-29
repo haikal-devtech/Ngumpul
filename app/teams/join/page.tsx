@@ -40,7 +40,8 @@ function decodeTeamFromHash(hash: string): { id: string; name: string; desc: str
 function JoinTeamContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user: authUser, authLoading } = useAuth();
+  const { user: authUser, loading: authLoading } = useAuth();
+
   const { currentUser, teams, setTeams, setCurrentTeam, language, addToast } = useAppContext();
   const [status, setStatus] = useState<"loading" | "joining" | "success" | "error" | "not-found">("loading");
   const [teamName, setTeamName] = useState("");
