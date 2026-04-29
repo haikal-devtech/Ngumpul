@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getServerSession } from "@/lib/serverAuth";
 import { 
   getEventBySlug, 
   updateEvent, 
@@ -13,7 +13,8 @@ export async function GET(
 ) {
   try {
     const slug = (await params).slug;
-    const session = await auth();
+    const session = await getServerSession();
+
 
     const event = await getEventBySlug(slug);
 
@@ -54,7 +55,8 @@ export async function PUT(
 ) {
   try {
     const slug = (await params).slug;
-    const session = await auth();
+    const session = await getServerSession();
+
     const body = await req.json();
     
     const event = await getEventBySlug(slug);

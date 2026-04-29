@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getServerSession } from "@/lib/serverAuth";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { createEvent, getEventsByHost } from "@/lib/firestore-utils";
 
@@ -13,10 +13,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
     }
 
-    const session = await auth();
+    const session = await getServerSession();
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
 
     const body = await req.json();
     const { title, desc, location_name, location_address, lat, lng, place_id, date_range, time_range, timezone, deadline, slug, team_id } = body;
@@ -51,10 +52,11 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     if (!session || !session.user || !session.user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
 
     const events = await getEventsByHost(session.user.id);
 
