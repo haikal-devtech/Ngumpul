@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { getEventBySlug, getUserProfile } from "@/lib/firestore-utils";
 import { auth } from "@/auth";
 import { addToGoogleCalendar } from "@/lib/calendar";
 import { NgumpulEvent } from "@/lib/types";
@@ -16,31 +16,22 @@ export async function POST(
 
     const { slug } = await params;
 
-    // 1. Fetch the event
-    const eventData = await prisma.event.findUnique({
-      where: { slug },
-      include: {
-        participants: { include: { user: { select: { name: true } } } }
-      }
-    });
+    const eventData = await getEventBySlug(slug);
 
     if (!eventData) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    // 2. Fetch Google OAuth Access Token for the current user
-    const account = await prisma.account.findFirst({
-      where: {
-        userId: session.user.id,
-        provider: "google"
-      }
-    });
+    // Note: In Firebase migration, we need to handle Google OAuth tokens differently.
+    // For now, this is a placeholder. In a real app, you'd store the token in Firestore
+    // or fetch it from the Firebase Auth user metadata if using specific providers.
+    const userProfile = await getUserProfile(session.user.id);
+    const accessToken = (userProfile as any)?.googleAccessToken;
 
-    if (!account?.access_token) {
+    if (!accessToken) {
       return NextResponse.json({ error: "Google account not connected or missing permissions" }, { status: 400 });
     }
 
-    // 3. Map to NgumpulEvent type
     const event: NgumpulEvent = {
       id: eventData.id,
       title: eventData.title,
@@ -49,15 +40,14 @@ export async function POST(
       dates: eventData.date_range,
       startTime: eventData.time_range[0] || "09:00",
       endTime: eventData.time_range[1] || "17:00",
-      participants: eventData.participants.map(p => ({
+      participants: (eventData.participants || []).map((p: any) => ({
         id: p.id,
-        name: p.user?.name || p.guest_name || "Unknown",
+        name: p.guest_name || "Unknown",
         availability: []
       }))
     };
 
-    // 4. Call Google API
-    await addToGoogleCalendar(event, account.access_token);
+    await addToGoogleCalendar(event, accessToken);
 
     return NextResponse.json({ success: true, message: "Event added to Google Calendar" });
   } catch (error: any) {
@@ -65,3 +55,4 @@ export async function POST(
     return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }
+

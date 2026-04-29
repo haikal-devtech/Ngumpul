@@ -197,3 +197,29 @@ export const getUserProfile = async (userId: string) => {
   return { id: docSnap.id, ...docSnap.data() };
 };
 
+export const getParticipantLocations = async (eventId: string) => {
+  const locationsCol = collection(db, "events", eventId, "participantLocations");
+  const snapshot = await getDocs(locationsCol);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
+export const deleteChatRoom = async (roomId: string) => {
+  const docRef = doc(db, "chatRooms", roomId);
+  await deleteDoc(docRef);
+};
+
+export const getChatMember = async (roomId: string, userId: string) => {
+  const docRef = doc(db, "chatRooms", roomId, "members", userId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) return null;
+  return { id: docSnap.id, ...docSnap.data() };
+};
+
+export const removeChatMember = async (roomId: string, userId: string) => {
+  const docRef = doc(db, "chatRooms", roomId, "members", userId);
+  await deleteDoc(docRef);
+};
+
+
+
+

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { getEventBySlug } from "@/lib/firestore-utils";
 import { generateICS } from "@/lib/calendar";
 import { NgumpulEvent } from "@/lib/types";
 
@@ -10,22 +10,12 @@ export async function GET(
   try {
     const { slug } = await params;
 
-    const eventData = await prisma.event.findUnique({
-      where: { slug },
-      include: {
-        participants: {
-          include: {
-            user: { select: { name: true } }
-          }
-        }
-      }
-    });
+    const eventData = await getEventBySlug(slug);
 
     if (!eventData) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    // Map Prisma models to NgumpulEvent type
     const event: NgumpulEvent = {
       id: eventData.id,
       title: eventData.title,
@@ -34,10 +24,10 @@ export async function GET(
       dates: eventData.date_range,
       startTime: eventData.time_range[0] || "09:00",
       endTime: eventData.time_range[1] || "17:00",
-      participants: eventData.participants.map(p => ({
+      participants: (eventData.participants || []).map((p: any) => ({
         id: p.id,
-        name: p.user?.name || p.guest_name || "Unknown",
-        availability: [] // Not needed for ICS export
+        name: p.guest_name || "Unknown",
+        availability: []
       }))
     };
 
@@ -46,7 +36,7 @@ export async function GET(
     return new NextResponse(icsContent, {
       headers: {
         "Content-Type": "text/calendar",
-        "Content-Disposition": `attachment; filename="${eventData.slug}.ics"`,
+        "Content-Disposition": `attachment; filename="${slug}.ics"`,
       },
     });
   } catch (error: any) {
@@ -54,3 +44,4 @@ export async function GET(
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
