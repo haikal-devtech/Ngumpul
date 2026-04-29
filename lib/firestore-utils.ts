@@ -109,8 +109,9 @@ export const getChatRooms = async (userId?: string) => {
   const querySnapshot = await getDocs(q);
   const rooms = [];
   for (const docSnapshot of querySnapshot.docs) {
-    const data = docSnapshot.data();
+    const data = docSnapshot.data() as any;
     if (data.isPrivate && userId) {
+
       const memberRef = doc(db, "chatRooms", docSnapshot.id, "members", userId);
       const memberDoc = await getDoc(memberRef);
       if (!memberDoc.exists()) continue;
