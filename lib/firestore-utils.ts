@@ -371,7 +371,7 @@ export const getChatPoll = async (roomId: string, pollId: string) => {
   const votesSnapshot = await getDocs(votesCol);
   const votes = votesSnapshot.docs.map(v => v.data());
   
-  return { id: docSnap.id, ...docSnap.data(), votes };
+  return { id: docSnap.id, roomId, ...docSnap.data(), votes };
 };
 
 export const voteChatPoll = async (roomId: string, pollId: string, userId: string, optionIndex: number) => {
