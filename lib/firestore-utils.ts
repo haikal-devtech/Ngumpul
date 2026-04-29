@@ -9,6 +9,7 @@ import {
   query, 
   where, 
   orderBy, 
+  limit,
 
   updateDoc, 
   deleteDoc,
@@ -165,7 +166,26 @@ export const getChatMessages = async (roomId: string, limitCount: number = 50, c
   return messages;
 };
 
+export const getChatRoomByInviteCode = async (inviteCode: string) => {
+  const q = query(collection(db, "chatRooms"), where("inviteCode", "==", inviteCode), limit(1));
+  const snapshot = await getDocs(q);
+  if (snapshot.empty) return null;
+  const docSnap = snapshot.docs[0];
+  const data = docSnap.data();
+  
+  // Count members
+  const membersCol = collection(db, "chatRooms", docSnap.id, "members");
+  const membersSnapshot = await getDocs(membersCol);
+  
+  return { 
+    id: docSnap.id, 
+    ...data, 
+    _count: { members: membersSnapshot.size } 
+  };
+};
+
 export const getChatRoom = async (roomId: string) => {
+
   const docRef = doc(db, "chatRooms", roomId);
   const docSnap = await getDoc(docRef);
   if (!docSnap.exists()) return null;
