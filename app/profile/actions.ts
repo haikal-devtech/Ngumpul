@@ -34,12 +34,14 @@ export async function getProfile() {
   const user = await getUserProfile(session.user.id);
   if (!user) return null;
   
+  const u = user as any;
   return {
-    id: user.id,
-    name: user.name,
-    image: user.image,
-    bio: user.bio,
-    email: user.email
+    id: u.id,
+    name: u.name,
+    image: u.image,
+    bio: u.bio,
+    email: u.email
   };
 }
+
 
