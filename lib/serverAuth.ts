@@ -7,29 +7,37 @@ export async function getServerSession() {
     const sessionCookie = cookieStore.get("__session")?.value;
 
     if (!sessionCookie) {
-      console.log("DEBUG: No __session cookie found in request");
+      console.log("DEBUG: [getServerSession] No __session cookie found.");
       return null;
     }
+
+    console.log("DEBUG: [getServerSession] Found cookie. Length:", sessionCookie.length);
 
     const auth = getAdminAuth();
     if (!auth) {
-      console.error("DEBUG: Firebase Admin Auth could not be initialized.");
+      console.error("DEBUG: [getServerSession] Firebase Admin Auth NOT INITIALIZED.");
       return null;
     }
 
-    // Since the client sets ID Token in __session cookie directly
-    const decodedToken = await auth.verifyIdToken(sessionCookie);
-    
-    return {
-      user: {
-        id: decodedToken.uid,
-        email: decodedToken.email,
-        name: decodedToken.name || decodedToken.email?.split("@")[0] || "User",
-        image: decodedToken.picture || null,
-      },
-    };
-  } catch (error) {
-    console.error("DEBUG: Error verifying ID Token from cookie:", error);
+    try {
+      // Verify the ID Token
+      const decodedToken = await auth.verifyIdToken(sessionCookie);
+      console.log("DEBUG: [getServerSession] Verification SUCCESS. User:", decodedToken.uid);
+      
+      return {
+        user: {
+          id: decodedToken.uid,
+          email: decodedToken.email,
+          name: decodedToken.name || decodedToken.email?.split("@")[0] || "User",
+          image: decodedToken.picture || null,
+        },
+      };
+    } catch (verifyError: any) {
+      console.error("DEBUG: [getServerSession] verifyIdToken FAILED:", verifyError.message);
+      return null;
+    }
+  } catch (error: any) {
+    console.error("DEBUG: [getServerSession] UNEXPECTED ERROR:", error.message);
     return null;
   }
 }
