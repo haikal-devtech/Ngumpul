@@ -23,7 +23,7 @@ export async function POST(
       return NextResponse.json({ error: "Target User ID is required" }, { status: 400 });
     }
 
-    const currentMember = await getChatMember(roomId, session.user.id);
+    const currentMember = (await getChatMember(roomId, session.user.id)) as any;
 
     if (!currentMember || (currentMember as any).role !== "admin") {
       return NextResponse.json({ error: "Forbidden - Admins only" }, { status: 403 });

@@ -26,7 +26,7 @@ export async function POST(
       return NextResponse.json({ error: "Option index is required" }, { status: 400 });
     }
 
-    const membership = await getChatMember(roomId, session.user.id);
+    const membership = (await getChatMember(roomId, session.user.id)) as any;
 
     if (!membership) {
       return NextResponse.json({ error: "Forbidden - Must be a room member" }, { status: 403 });

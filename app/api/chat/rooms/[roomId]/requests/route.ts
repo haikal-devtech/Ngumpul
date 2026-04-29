@@ -21,7 +21,7 @@ export async function GET(
 
     const { roomId } = await params;
 
-    const adminCheck = await getChatMember(roomId, session.user.id);
+    const adminCheck = (await getChatMember(roomId, session.user.id)) as any;
 
     if (!adminCheck || adminCheck.role !== "admin") {
       return NextResponse.json({ error: "Forbidden - Admins only" }, { status: 403 });
@@ -48,7 +48,7 @@ export async function POST(
 
     const { roomId } = await params;
 
-    const adminCheck = await getChatMember(roomId, session.user.id);
+    const adminCheck = (await getChatMember(roomId, session.user.id)) as any;
 
     if (!adminCheck || adminCheck.role !== "admin") {
       return NextResponse.json({ error: "Forbidden - Admins only" }, { status: 403 });

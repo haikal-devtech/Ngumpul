@@ -27,7 +27,7 @@ export async function GET(
     }
 
     if ((room as any).isPrivate) {
-      const membership = await getChatMember(roomId, session.user.id);
+      const membership = (await getChatMember(roomId, session.user.id)) as any;
       if (!membership) {
         return NextResponse.json({ error: "Forbidden: Not a member of this room" }, { status: 403 });
       }
@@ -63,7 +63,7 @@ export async function POST(
       );
     }
 
-    const membership = await getChatMember(roomId, session.user.id);
+    const membership = (await getChatMember(roomId, session.user.id)) as any;
 
     if (!membership) {
       return NextResponse.json({ error: "Forbidden - Must be a room member" }, { status: 403 });
