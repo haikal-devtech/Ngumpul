@@ -174,7 +174,15 @@ export const getChatRoom = async (roomId: string) => {
   return { id: docSnap.id, ...data, members: membersSnapshot.docs.map(docSnapshot => docSnapshot.data()) };
 };
 
+export const generateChatInviteCode = async (roomId: string) => {
+  const inviteCode = Math.random().toString(36).substring(2, 12);
+  const docRef = doc(db, "chatRooms", roomId);
+  await setDoc(docRef, { inviteCode }, { merge: true });
+  return inviteCode;
+};
+
 export const addChatMember = async (roomId: string, userId: string, role: string = "member") => {
+
   await setDoc(doc(db, "chatRooms", roomId, "members", userId), {
     userId,
     role,
@@ -221,7 +229,13 @@ export const removeChatMember = async (roomId: string, userId: string) => {
   await deleteDoc(docRef);
 };
 
+export const updateChatMemberPin = async (roomId: string, userId: string, isPinned: boolean) => {
+  const docRef = doc(db, "chatRooms", roomId, "members", userId);
+  await setDoc(docRef, { isPinned }, { merge: true });
+};
+
 export const updateChatMemberRole = async (roomId: string, userId: string, role: string) => {
+
   const docRef = doc(db, "chatRooms", roomId, "members", userId);
   await setDoc(docRef, { role }, { merge: true });
 };
@@ -351,5 +365,28 @@ export const voteChatPoll = async (roomId: string, pollId: string, userId: strin
     createdAt: serverTimestamp(),
   });
 };
+
+export const getChatJoinRequests = async (roomId: string) => {
+  const requestsCol = collection(db, "chatRooms", roomId, "joinRequests");
+  const q = query(requestsCol, where("status", "==", "pending"), orderBy("createdAt", "asc"));
+  const snapshot = await getDocs(q);
+  const requests = [];
+  for (const docSnap of snapshot.docs) {
+    const data = docSnap.data();
+    const userProfile = await getUserProfile(docSnap.id); // Doc ID is userId
+    requests.push({
+      id: docSnap.id,
+      ...data,
+      user: userProfile,
+    });
+  }
+  return requests;
+};
+
+export const updateChatJoinRequestStatus = async (roomId: string, userId: string, status: "approved" | "rejected") => {
+  const docRef = doc(db, "chatRooms", roomId, "joinRequests", userId);
+  await setDoc(docRef, { status }, { merge: true });
+};
+
 
 
