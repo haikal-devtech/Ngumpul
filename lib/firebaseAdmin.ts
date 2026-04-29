@@ -1,54 +1,63 @@
 import * as admin from "firebase-admin";
 
 const initializeFirebaseAdmin = () => {
+  console.log("DIAGNOSTIC: initializeFirebaseAdmin called. Apps length:", admin.apps.length);
+  
   if (admin.apps.length > 0) return admin.app();
 
+  const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  
+  if (!key) {
+    console.error("DIAGNOSTIC: !!! FIREBASE_SERVICE_ACCOUNT_KEY IS TOTALLY MISSING !!!");
+    return null;
+  }
+
   try {
-    let key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    let sanitizedKey = key.trim();
     
-    if (!key) {
-      console.error("DIAGNOSTIC: FIREBASE_SERVICE_ACCOUNT_KEY is UNDEFINED or EMPTY in Vercel.");
-      return null;
-    }
-
-    console.log("DIAGNOSTIC: Found FIREBASE_SERVICE_ACCOUNT_KEY. Length:", key.length);
-
-    // Clean quotes
-    if (key.startsWith('"') && key.endsWith('"')) {
-      key = key.slice(1, -1);
+    // Clean wrapping quotes
+    if (sanitizedKey.startsWith('"') && sanitizedKey.endsWith('"')) {
+      sanitizedKey = sanitizedKey.slice(1, -1);
     }
 
     // Fix escaped newlines
-    const sanitizedKey = key.replace(/\\n/g, '\n');
+    sanitizedKey = sanitizedKey.replace(/\\n/g, '\n');
 
     const serviceAccount = JSON.parse(sanitizedKey);
-    console.log("DIAGNOSTIC: Successfully parsed JSON. Project ID:", serviceAccount.project_id);
+    console.log("DIAGNOSTIC: JSON Parse Success. Project ID:", serviceAccount.project_id);
 
     return admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
       databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`,
     });
-  } catch (error) {
-    console.error("DIAGNOSTIC: CRITICAL failure in initializeFirebaseAdmin:", error);
+  } catch (error: any) {
+    console.error("DIAGNOSTIC: JSON Parse or Init FAILED:", error.message);
     return null;
   }
 };
 
+// EXTREMELY IMPORTANT: Try to initialize at least once at module load
+initializeFirebaseAdmin();
+
 export const getAdminAuth = () => {
-  initializeFirebaseAdmin();
-  return admin.auth();
+  const app = admin.apps.length > 0 ? admin.app() : initializeFirebaseAdmin();
+  if (!app) throw new Error("Firebase Admin Auth could not be initialized. Check Environment Variables.");
+  return admin.auth(app);
 };
 
 export const getAdminDb = () => {
-  initializeFirebaseAdmin();
-  return admin.firestore();
+  const app = admin.apps.length > 0 ? admin.app() : initializeFirebaseAdmin();
+  if (!app) throw new Error("Firebase Admin DB could not be initialized. Check Environment Variables.");
+  return admin.firestore(app);
 };
 
 export const getAdminStorage = () => {
-  initializeFirebaseAdmin();
-  return admin.storage();
+  const app = admin.apps.length > 0 ? admin.app() : initializeFirebaseAdmin();
+  if (!app) throw new Error("Firebase Admin Storage could not be initialized. Check Environment Variables.");
+  return admin.storage(app);
 };
 
+// Fallback exports
 export const adminAuth = admin.apps.length ? admin.auth() : null as any;
 export const adminDb = admin.apps.length ? admin.firestore() : null as any;
 export const adminStorage = admin.apps.length ? admin.storage() : null as any;
