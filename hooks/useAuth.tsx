@@ -33,10 +33,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(user);
       if (user) {
         const token = await user.getIdToken();
+        console.log("Firebase Auth: Token received, setting __session cookie");
         document.cookie = `__session=${token}; path=/; samesite=lax; secure`;
+        console.log("Firebase Auth: Cookie set. Current cookies:", document.cookie.substring(0, 50) + "...");
       } else {
+        console.log("Firebase Auth: No user, clearing __session cookie");
         document.cookie = "__session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=lax; secure";
       }
+
 
       setLoading(false);
     });
