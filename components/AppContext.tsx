@@ -71,9 +71,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || 'User',
           email: firebaseUser.email || '',
-          image: firebaseUser.photoURL || '',
-          createdAt: new Date().toISOString(),
+          photoUrl: firebaseUser.photoURL || '',
+          bio: '',
         });
+
       } else {
         setCurrentUser(null);
       }
