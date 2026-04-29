@@ -1,14 +1,18 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "@/lib/serverAuth";
+import { 
+  getChatMessageById, 
+  updateChatMessage, 
+  getChatMember 
+} from "@/lib/firestore-utils";
 
 export async function PATCH(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ messageId: string }> }
 ) {
   try {
     const { messageId } = await params;
-    const session = await auth();
+    const session = await getServerSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -19,29 +23,22 @@ export async function PATCH(
       return NextResponse.json({ error: "Content is required" }, { status: 400 });
     }
 
-    const message = await prisma.chatMessage.findUnique({
-      where: { id: messageId },
-    });
+    const message = await getChatMessageById(messageId);
 
     if (!message) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }
 
-    if (message.senderId !== userId) {
+    if ((message as any).senderId !== userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const updatedMessage = await prisma.chatMessage.update({
-      where: { id: messageId },
-      data: { content: content.trim() },
-      include: {
-        sender: {
-          select: { id: true, name: true, image: true },
-        },
-      },
+    await updateChatMessage((message as any).roomId, messageId, { 
+      content: content.trim(),
+      updatedAt: new Date()
     });
 
-    return NextResponse.json(updatedMessage);
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to edit message:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -49,60 +46,49 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ messageId: string }> }
 ) {
   try {
     const { messageId } = await params;
-    const session = await auth();
+    const session = await getServerSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const userId = session.user.id;
 
-    const message = await prisma.chatMessage.findUnique({
-      where: { id: messageId },
-    });
+    const message = await getChatMessageById(messageId);
 
     if (!message) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }
 
-    if (message.senderId !== userId) {
-      // Check if user is admin of the room
-      const member = await prisma.chatMember.findFirst({
-        where: {
-          roomId: message.roomId,
-          userId: userId,
-          role: 'ADMIN'
-        }
-      });
+    const roomId = (message as any).roomId;
+
+    if ((message as any).senderId !== userId) {
+      const member = await getChatMember(roomId, userId);
       
-      if (!member) {
+      if (!member || (member as any).role !== "admin") {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     } else {
-      // Check if within 5 minutes for the sender
+      const createdAt = (message as any).createdAt?.toDate() || new Date();
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      if (message.createdAt < fiveMinutesAgo) {
+      if (createdAt < fiveMinutesAgo) {
         return NextResponse.json({ error: "Message cannot be deleted after 5 minutes" }, { status: 400 });
       }
     }
 
-    const updatedMessage = await prisma.chatMessage.update({
-      where: { id: messageId },
-      data: { isDeleted: true, content: "Pesan ini telah dihapus" },
-      include: {
-        sender: {
-          select: { id: true, name: true, image: true },
-        },
-      },
+    await updateChatMessage(roomId, messageId, { 
+      isDeleted: true, 
+      content: "Pesan ini telah dihapus" 
     });
 
-    return NextResponse.json(updatedMessage);
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to delete message:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+

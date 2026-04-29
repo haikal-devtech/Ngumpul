@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getChatMember, removeChatMember } from "@/lib/firestore-utils";
-import { auth } from "@/auth";
+import { getServerSession } from "@/lib/serverAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +9,11 @@ export async function POST(
   { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
 
     const { roomId } = await params;
     const body = await req.json();

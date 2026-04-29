@@ -1,5 +1,6 @@
 import { 
   collection, 
+  collectionGroup,
   doc, 
   getDoc, 
   getDocs, 
@@ -8,6 +9,7 @@ import {
   query, 
   where, 
   orderBy, 
+
   updateDoc, 
   deleteDoc,
   Timestamp,
@@ -388,5 +390,30 @@ export const updateChatJoinRequestStatus = async (roomId: string, userId: string
   await setDoc(docRef, { status }, { merge: true });
 };
 
+export const getChatPollById = async (pollId: string) => {
+  const pollsQuery = query(collectionGroup(db, "polls"), where("__name__", "==", pollId), limit(1));
+  const snapshot = await getDocs(pollsQuery);
+  if (snapshot.empty) return null;
+  const docSnap = snapshot.docs[0];
+  const roomId = docSnap.ref.parent.parent?.id;
+  return { id: docSnap.id, roomId, ...docSnap.data() };
+};
+
+export const updateChatPollStatus = async (roomId: string, pollId: string, isFinalized: boolean) => {
+  const docRef = doc(db, "chatRooms", roomId, "polls", pollId);
+  await setDoc(docRef, { isFinalized }, { merge: true });
+};export const getChatMessageById = async (messageId: string) => {
+  const messagesQuery = query(collectionGroup(db, "messages"), where("__name__", "==", messageId), limit(1));
+  const snapshot = await getDocs(messagesQuery);
+  if (snapshot.empty) return null;
+  const docSnap = snapshot.docs[0];
+  const roomId = docSnap.ref.parent.parent?.id;
+  return { id: docSnap.id, roomId, ...docSnap.data() };
+};
+
+export const updateChatMessage = async (roomId: string, messageId: string, data: any) => {
+  const docRef = doc(db, "chatRooms", roomId, "messages", messageId);
+  await setDoc(docRef, data, { merge: true });
+};
 
 

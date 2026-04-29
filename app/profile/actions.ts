@@ -1,10 +1,10 @@
 "use server";
-import { auth } from "@/auth";
+import { getServerSession } from "@/lib/serverAuth";
 import { updateUserProfile, getUserProfile } from "@/lib/firestore-utils";
 import { revalidatePath } from "next/cache";
 
 export async function updateProfile(data: { name: string; bio: string }) {
-  const session = await auth();
+  const session = await getServerSession();
   if (!session?.user?.id) {
     return { success: false, error: "Not logged in" };
   }
@@ -26,7 +26,7 @@ export async function updateProfile(data: { name: string; bio: string }) {
 }
 
 export async function getProfile() {
-  const session = await auth();
+  const session = await getServerSession();
   if (!session?.user?.id) {
     return null;
   }
@@ -43,5 +43,6 @@ export async function getProfile() {
     email: u.email
   };
 }
+
 
 
