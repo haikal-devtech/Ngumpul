@@ -219,7 +219,13 @@ export const getChatMember = async (roomId: string, userId: string) => {
 export const removeChatMember = async (roomId: string, userId: string) => {
   const docRef = doc(db, "chatRooms", roomId, "members", userId);
   await deleteDoc(docRef);
-};export const getChatRoomByInviteCode = async (inviteCode: string) => {
+};
+
+export const updateChatMemberRole = async (roomId: string, userId: string, role: string) => {
+  const docRef = doc(db, "chatRooms", roomId, "members", userId);
+  await setDoc(docRef, { role }, { merge: true });
+};
+export const getChatRoomByInviteCode = async (inviteCode: string) => {
   const roomsCol = collection(db, "chatRooms");
   const q = query(roomsCol, where("inviteCode", "==", inviteCode), limit(1));
   const querySnapshot = await getDocs(q);
@@ -242,3 +248,55 @@ export const createChatJoinRequest = async (roomId: string, userId: string) => {
     createdAt: serverTimestamp(),
   });
 };
+
+export const addReport = async (data: { messageId: string, reporterId: string, reason: string }) => {
+  const reportRef = doc(collection(db, "reports"));
+  await setDoc(reportRef, {
+    ...data,
+    createdAt: serverTimestamp(),
+  });
+  return { id: reportRef.id, ...data };
+};
+
+export const getReport = async (messageId: string, reporterId: string) => {
+  const reportsCol = collection(db, "reports");
+  const q = query(reportsCol, where("messageId", "==", messageId), where("reporterId", "==", reporterId), limit(1));
+  const snapshot = await getDocs(q);
+  if (snapshot.empty) return null;
+  return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+};
+
+export const addBlock = async (blockerId: string, blockedId: string) => {
+  await setDoc(doc(db, "users", blockerId, "blocks", blockedId), {
+    blockedId,
+    createdAt: serverTimestamp(),
+  });
+};
+
+export const getBlock = async (blockerId: string, blockedId: string) => {
+  const docRef = doc(db, "users", blockerId, "blocks", blockedId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) return null;
+  return { id: docSnap.id, ...docSnap.data() };
+};
+export const removeBlock = async (blockerId: string, blockedId: string) => {
+  await deleteDoc(doc(db, "users", blockerId, "blocks", blockedId));
+};
+
+export const getBlockedUsers = async (blockerId: string) => {
+  const blocksCol = collection(db, "users", blockerId, "blocks");
+  const snapshot = await getDocs(blocksCol);
+  const blockedUsers = [];
+  for (const blockDoc of snapshot.docs) {
+    const blockedId = blockDoc.id;
+    const userProfile = await getUserProfile(blockedId);
+    blockedUsers.push({
+      id: blockedId,
+      name: userProfile?.name || "Unknown",
+      image: userProfile?.photoUrl || null,
+      blockedAt: blockDoc.data().createdAt?.toDate() || new Date(),
+    });
+  }
+  return blockedUsers;
+};
+
