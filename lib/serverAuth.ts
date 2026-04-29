@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { adminAuth } from "./firebaseAdmin";
+import { getAdminAuth } from "./firebaseAdmin";
 
 export async function getServerSession() {
   try {
@@ -7,16 +7,19 @@ export async function getServerSession() {
     const sessionCookie = cookieStore.get("__session")?.value;
 
     if (!sessionCookie) {
-      console.log("No __session cookie found in request");
+      console.log("DEBUG: No __session cookie found in request");
       return null;
     }
 
-    if (!adminAuth) {
-      console.error("Firebase Admin Auth not initialized! Check FIREBASE_SERVICE_ACCOUNT_KEY");
+    const auth = getAdminAuth();
+    if (!auth) {
+      console.error("DEBUG: Firebase Admin Auth could not be initialized.");
       return null;
     }
 
-    const decodedToken = await adminAuth.verifyIdToken(sessionCookie);
+    // IMPORTANT: Use verifySessionCookie for the __session cookie, NOT verifyIdToken
+    const decodedToken = await auth.verifySessionCookie(sessionCookie, true);
+    
     return {
       user: {
         id: decodedToken.uid,
@@ -26,8 +29,7 @@ export async function getServerSession() {
       },
     };
   } catch (error) {
-    console.error("Error verifying session cookie:", error);
+    console.error("DEBUG: Error verifying session cookie:", error);
     return null;
   }
 }
-
