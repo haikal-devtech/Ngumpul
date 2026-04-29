@@ -1,13 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useAuth } from "@/hooks/useAuth";
 import { useAppContext } from "@/components/AppContext";
 import { updateProfile, getProfile } from "./actions";
 import { Loader2, Save, LogOut, CheckCircle } from "lucide-react";
 
 export default function ProfilePage() {
   const { language, setCurrentUser, currentUser } = useAppContext();
-  const { data: session, update } = useSession();
+  const { user: authUser, logout } = useAuth();
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -31,19 +31,19 @@ export default function ProfilePage() {
       if (dbUser) {
         setName(dbUser.name || "");
         setBio(dbUser.bio || "");
-      } else if (session?.user) {
-        setName(session.user.name || "");
+      } else if (authUser) {
+        setName(authUser.displayName || "");
       }
       setIsLoading(false);
     }
-    if (session) {
+    if (authUser) {
       loadData();
+    } else {
+      setIsLoading(false);
     }
-  }, [session]);
+  }, [authUser]);
 
   const handleLogout = async () => {
-    // Clear all persisted user data from localStorage before signing out
-    // This prevents stale event/team data from appearing after logout
     const keysToRemove = [
       "ngumpul_myEvents",
       "ngumpul_joinedEvents",
@@ -51,8 +51,8 @@ export default function ProfilePage() {
       "ngumpul_currentTeam",
     ];
     keysToRemove.forEach((key) => localStorage.removeItem(key));
-
-    await signOut({ callbackUrl: "/" });
+    await logout();
+    window.location.href = "/";
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -62,24 +62,27 @@ export default function ProfilePage() {
 
     const res = await updateProfile({ name, bio });
     if (res.success) {
-      // Update next-auth session token locally
-      await update({ name });
-      
-      // Update global context so Navbar reflects immediately
       if (currentUser) {
         setCurrentUser({ ...currentUser, name, bio });
       }
-      
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     }
     setIsSaving(false);
   };
 
-  if (!session) {
+  if (isLoading) {
     return (
       <div className="min-h-screen pt-32 pb-20 px-4 sm:px-6 flex items-center justify-center">
-        <p className="text-zinc-500 dark:text-zinc-400">Loading...</p>
+        <Loader2 className="animate-spin text-indigo-500" />
+      </div>
+    );
+  }
+
+  if (!authUser) {
+    return (
+      <div className="min-h-screen pt-32 pb-20 px-4 sm:px-6 flex items-center justify-center">
+        <p className="text-zinc-500 dark:text-zinc-400">Please sign in to view your profile.</p>
       </div>
     );
   }
@@ -103,15 +106,16 @@ export default function ProfilePage() {
       <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 shadow-sm">
         <div className="flex items-center gap-6 mb-8 pb-8 border-b border-zinc-100 dark:border-zinc-800">
           <img 
-            src={session.user?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`} 
+            src={authUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`} 
             alt="Profile Picture" 
             className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-zinc-800 shadow-lg"
           />
           <div>
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-white">{name || session.user?.name}</h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">{session.user?.email}</p>
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-white">{name || authUser.displayName}</h2>
+            <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">{authUser.email}</p>
           </div>
         </div>
+
 
         {isLoading ? (
           <div className="flex justify-center py-8">

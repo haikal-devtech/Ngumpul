@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/hooks/useAuth";
 import { useAppContext } from "@/components/AppContext";
 import { Team } from "@/lib/types";
 
@@ -40,7 +40,7 @@ function decodeTeamFromHash(hash: string): { id: string; name: string; desc: str
 function JoinTeamContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session, status: sessionStatus } = useSession();
+  const { user: authUser, authLoading } = useAuth();
   const { currentUser, teams, setTeams, setCurrentTeam, language, addToast } = useAppContext();
   const [status, setStatus] = useState<"loading" | "joining" | "success" | "error" | "not-found">("loading");
   const [teamName, setTeamName] = useState("");
@@ -161,7 +161,8 @@ function JoinTeamContent() {
     setStatus("success");
     addToast(language === 'id' ? `Bergabung dengan ${teamData.name}!` : `Joined ${teamData.name}!`, 'success');
     setTimeout(() => router.push("/teams"), 1500);
-  }, [sessionStatus, currentUser, processed]);
+  }, [authLoading, currentUser, processed]);
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900 flex items-center justify-center px-4">
