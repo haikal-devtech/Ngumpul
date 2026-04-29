@@ -300,3 +300,56 @@ export const getBlockedUsers = async (blockerId: string) => {
   return blockedUsers;
 };
 
+export const getChatPolls = async (roomId: string) => {
+  const pollsCol = collection(db, "chatRooms", roomId, "polls");
+  const q = query(pollsCol, orderBy("createdAt", "desc"));
+  const snapshot = await getDocs(q);
+  const polls = [];
+  for (const pollDoc of snapshot.docs) {
+    const pollData = pollDoc.data();
+    const votesCol = collection(db, "chatRooms", roomId, "polls", pollDoc.id, "votes");
+    const votesSnapshot = await getDocs(votesCol);
+    const votes = votesSnapshot.docs.map(v => v.data());
+    const creator = await getUserProfile(pollData.createdById);
+    polls.push({
+      id: pollDoc.id,
+      ...pollData,
+      votes,
+      createdBy: creator,
+    });
+  }
+  return polls;
+};
+
+export const createChatPoll = async (roomId: string, data: { question: string, options: string[], createdById: string }) => {
+  const pollRef = doc(collection(db, "chatRooms", roomId, "polls"));
+  const pollData = {
+    ...data,
+    createdAt: serverTimestamp(),
+  };
+  await setDoc(pollRef, pollData);
+  return { id: pollRef.id, ...pollData, votes: [] };
+};
+
+export const getChatPoll = async (roomId: string, pollId: string) => {
+  const docRef = doc(db, "chatRooms", roomId, "polls", pollId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) return null;
+  
+  const votesCol = collection(db, "chatRooms", roomId, "polls", pollId, "votes");
+  const votesSnapshot = await getDocs(votesCol);
+  const votes = votesSnapshot.docs.map(v => v.data());
+  
+  return { id: docSnap.id, ...docSnap.data(), votes };
+};
+
+export const voteChatPoll = async (roomId: string, pollId: string, userId: string, optionIndex: number) => {
+  const voteRef = doc(db, "chatRooms", roomId, "polls", pollId, "votes", userId);
+  await setDoc(voteRef, {
+    userId,
+    optionIndex,
+    createdAt: serverTimestamp(),
+  });
+};
+
+

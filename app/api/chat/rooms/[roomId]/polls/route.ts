@@ -1,49 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getServerSession } from "@/lib/serverAuth";
+import { 
+  getChatRoom, 
+  getChatMember, 
+  getChatPolls, 
+  createChatPoll 
+} from "@/lib/firestore-utils";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/chat/rooms/[roomId]/polls — list all polls for a room
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { roomId } = await params;
-
-    // ── Membership check: must be a room member to read polls ─────────────
-    const room = await prisma.chatRoom.findUnique({
-      where: { id: roomId },
-      select: { id: true, isPrivate: true },
-    });
+    const room = await getChatRoom(roomId);
 
     if (!room) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
 
-    if (room.isPrivate) {
-      const membership = await prisma.chatMember.findUnique({
-        where: { roomId_userId: { roomId, userId: session.user.id } },
-      });
+    if ((room as any).isPrivate) {
+      const membership = await getChatMember(roomId, session.user.id);
       if (!membership) {
         return NextResponse.json({ error: "Forbidden: Not a member of this room" }, { status: 403 });
       }
     }
 
-    const polls = await prisma.chatPoll.findMany({
-      where: { roomId },
-      include: {
-        votes: true,
-        createdBy: { select: { id: true, name: true, image: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const polls = await getChatPolls(roomId);
 
     return NextResponse.json(polls);
   } catch (error: any) {
@@ -52,13 +42,12 @@ export async function GET(
   }
 }
 
-// POST /api/chat/rooms/[roomId]/polls — create a new poll
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ roomId: string }> }
 ) {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -74,23 +63,16 @@ export async function POST(
       );
     }
 
-    // Verify membership
-    const membership = await prisma.chatMember.findUnique({
-      where: { roomId_userId: { roomId, userId: session.user.id } },
-    });
+    const membership = await getChatMember(roomId, session.user.id);
 
     if (!membership) {
       return NextResponse.json({ error: "Forbidden - Must be a room member" }, { status: 403 });
     }
 
-    const poll = await prisma.chatPoll.create({
-      data: {
-        roomId,
-        question: question.trim(),
-        options: options.map((opt: string) => opt.trim()).filter((opt: string) => opt.length > 0),
-        createdById: session.user.id,
-      },
-      include: { votes: true },
+    const poll = await createChatPoll(roomId, {
+      question: question.trim(),
+      options: options.map((opt: string) => opt.trim()).filter((opt: string) => opt.length > 0),
+      createdById: session.user.id,
     });
 
     return NextResponse.json(poll, { status: 201 });
@@ -99,3 +81,4 @@ export async function POST(
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+

@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getServerSession } from "@/lib/serverAuth";
+import { 
+  getChatMember, 
+  getChatPoll, 
+  voteChatPoll 
+} from "@/lib/firestore-utils";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/chat/rooms/[roomId]/polls/[pollId]/vote — submit a vote
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ roomId: string, pollId: string }> }
 ) {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -23,46 +26,28 @@ export async function POST(
       return NextResponse.json({ error: "Option index is required" }, { status: 400 });
     }
 
-    // Verify membership
-    const membership = await prisma.chatMember.findUnique({
-      where: { roomId_userId: { roomId, userId: session.user.id } },
-    });
+    const membership = await getChatMember(roomId, session.user.id);
 
     if (!membership) {
       return NextResponse.json({ error: "Forbidden - Must be a room member" }, { status: 403 });
     }
 
-    // Verify poll exists
-    const poll = await prisma.chatPoll.findUnique({
-      where: { id: pollId },
-    });
+    const poll = await getChatPoll(roomId, pollId);
 
-    if (!poll || poll.roomId !== roomId) {
+    if (!poll || (poll as any).roomId !== roomId) {
       return NextResponse.json({ error: "Poll not found" }, { status: 404 });
     }
 
-    if (optionIndex < 0 || optionIndex >= poll.options.length) {
+    if (optionIndex < 0 || optionIndex >= (poll as any).options.length) {
       return NextResponse.json({ error: "Invalid option index" }, { status: 400 });
     }
 
-    // Upsert vote
-    const vote = await prisma.chatPollVote.upsert({
-      where: {
-        pollId_userId: { pollId, userId: session.user.id },
-      },
-      update: {
-        optionIndex,
-      },
-      create: {
-        pollId,
-        userId: session.user.id,
-        optionIndex,
-      },
-    });
+    await voteChatPoll(roomId, pollId, session.user.id, optionIndex);
 
-    return NextResponse.json(vote);
+    return NextResponse.json({ success: true, optionIndex });
   } catch (error: any) {
     console.error("Error submitting vote:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
