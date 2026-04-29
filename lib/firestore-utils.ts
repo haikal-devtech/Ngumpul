@@ -15,7 +15,6 @@ import {
   deleteDoc,
   Timestamp,
   serverTimestamp,
-  limit,
   startAfter
 } from "firebase/firestore";
 
@@ -257,17 +256,8 @@ export const updateChatMemberPin = async (roomId: string, userId: string, isPinn
 };
 
 export const updateChatMemberRole = async (roomId: string, userId: string, role: string) => {
-
   const docRef = doc(db, "chatRooms", roomId, "members", userId);
   await setDoc(docRef, { role }, { merge: true });
-};
-export const getChatRoomByInviteCode = async (inviteCode: string) => {
-  const roomsCol = collection(db, "chatRooms");
-  const q = query(roomsCol, where("inviteCode", "==", inviteCode), limit(1));
-  const querySnapshot = await getDocs(q);
-  if (querySnapshot.empty) return null;
-  const docSnap = querySnapshot.docs[0];
-  return { id: docSnap.id, ...docSnap.data() };
 };
 
 export const getChatJoinRequest = async (roomId: string, userId: string) => {
