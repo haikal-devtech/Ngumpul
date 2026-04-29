@@ -7,10 +7,18 @@ const getServiceAccount = () => {
     return null;
   }
   try {
-    return JSON.parse(key);
+    // Handle cases where the key might be escaped or have literal newlines
+    const formattedKey = key.trim();
+    return JSON.parse(formattedKey);
   } catch (e) {
     console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY:", e);
-    return null;
+    // Try to fix common escaping issues if first parse fails
+    try {
+        return JSON.parse(key.replace(/\\n/g, '\n'));
+    } catch (e2) {
+        console.error("Second parse attempt failed:", e2);
+        return null;
+    }
   }
 };
 
