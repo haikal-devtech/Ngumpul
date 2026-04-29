@@ -11,16 +11,22 @@ const securityHeaders = [
     key: "X-Content-Type-Options",
     value: "nosniff",
   },
-  // ── Disallow being embedded in iframes (clickjacking protection) ──────────
+  // ── Disallow being embedded in iframes except same origin ────────────────
   {
     key: "X-Frame-Options",
-    value: "DENY",
+    value: "SAMEORIGIN",
   },
-  // ── Legacy XSS filter (belt-and-suspenders for older browsers) ───────────
+  // ── Allow popups to communicate across origins (for Firebase Auth) ───────
+  {
+    key: "Cross-Origin-Opener-Policy",
+    value: "same-origin-allow-popups",
+  },
+  // ── Legacy XSS filter ────────────────────────────────────────────────────
   {
     key: "X-XSS-Protection",
     value: "1; mode=block",
   },
+
   // ── Restrict Referer header to same origin ────────────────────────────────
   {
     key: "Referrer-Policy",
