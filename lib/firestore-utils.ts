@@ -45,7 +45,7 @@ export interface FirestoreEvent {
 }
 
 export const getEventsByHost = async (hostId: string) => {
-  const q = query(eventsCollection, where("host_id", "==", hostId), orderBy("createdAt", "desc"));
+  const q = query(eventsCollection, where("host_id", "==", hostId)/*, orderBy("createdAt", "desc")*/);
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
@@ -103,9 +103,9 @@ export const chatRoomsCollection = collection(db, "chatRooms");
 export const getChatRooms = async (userId?: string) => {
   let q;
   if (!userId) {
-    q = query(chatRoomsCollection, where("isPrivate", "==", false), orderBy("createdAt", "asc"));
+    q = query(chatRoomsCollection, where("isPrivate", "==", false)/*, orderBy("createdAt", "asc")*/);
   } else {
-    q = query(chatRoomsCollection, orderBy("createdAt", "asc"));
+    q = query(chatRoomsCollection/*, orderBy("createdAt", "asc")*/);
   }
   
   try {
@@ -385,7 +385,7 @@ export const voteChatPoll = async (roomId: string, pollId: string, userId: strin
 
 export const getChatJoinRequests = async (roomId: string) => {
   const requestsCol = collection(db, "chatRooms", roomId, "joinRequests");
-  const q = query(requestsCol, where("status", "==", "pending"), orderBy("createdAt", "asc"));
+  const q = query(requestsCol, where("status", "==", "pending")/*, orderBy("createdAt", "asc")*/);
   const snapshot = await getDocs(q);
   const requests = [];
   for (const docSnap of snapshot.docs) {

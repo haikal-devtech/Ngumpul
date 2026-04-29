@@ -1,40 +1,43 @@
 import * as admin from "firebase-admin";
 
-const getServiceAccount = () => {
-  const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!key) {
-    console.warn("FIREBASE_SERVICE_ACCOUNT_KEY is missing");
-    return null;
-  }
+const initializeFirebaseAdmin = () => {
+  if (admin.apps.length > 0) return;
+
   try {
-    // Handle cases where the key might be escaped or have literal newlines
-    const formattedKey = key.trim();
-    return JSON.parse(formattedKey);
-  } catch (e) {
-    console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY:", e);
-    // Try to fix common escaping issues if first parse fails
-    try {
-        return JSON.parse(key.replace(/\\n/g, '\n'));
-    } catch (e2) {
-        console.error("Second parse attempt failed:", e2);
-        return null;
+    let key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    
+    if (!key) {
+      console.error("FIREBASE_SERVICE_ACCOUNT_KEY is missing from environment variables!");
+      return;
     }
+
+    // 1. Clean extra quotes if wrapped
+    if (key.startsWith('"') && key.endsWith('"')) {
+      key = key.slice(1, -1);
+    }
+
+    // 2. Handle escaped newlines (very common in Vercel/Docker)
+    const sanitizedKey = key.replace(/\\n/g, '\n');
+
+    // 3. Parse JSON
+    const serviceAccount = JSON.parse(sanitizedKey);
+
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`,
+    });
+
+    console.log("Firebase Admin SDK initialized successfully.");
+  } catch (error) {
+    console.error("CRITICAL: Failed to initialize Firebase Admin SDK:", error);
   }
 };
 
-const serviceAccount = getServiceAccount();
-
-if (!admin.apps.length && serviceAccount) {
-
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`,
-  });
-}
+// Initialize immediately
+initializeFirebaseAdmin();
 
 const adminAuth = admin.apps.length ? admin.auth() : null as any;
 const adminDb = admin.apps.length ? admin.firestore() : null as any;
 const adminStorage = admin.apps.length ? admin.storage() : null as any;
 
 export { adminAuth, adminDb, adminStorage };
-
