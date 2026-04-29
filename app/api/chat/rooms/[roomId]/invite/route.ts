@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
-import { nanoid } from "nanoid";
+import { v4 as uuidv4 } from "uuid";
+
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,8 @@ export async function GET(
 
     // Generate code if it doesn't exist
     if (!room.inviteCode) {
-      const newCode = nanoid(10);
+      const newCode = uuidv4().substring(0, 10);
+
       const updated = await prisma.chatRoom.update({
         where: { id: roomId },
         data: { inviteCode: newCode },
