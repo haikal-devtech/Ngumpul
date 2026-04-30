@@ -51,9 +51,9 @@ const securityHeaders = [
       // Fonts
       "font-src 'self' https://fonts.gstatic.com",
       // Images: self + Unsplash + DiceBear + Google
-      "img-src 'self' data: blob: https://images.unsplash.com https://api.dicebear.com https://*.googleusercontent.com https://*.googleapis.com https://*.firebaseapp.com https://www.gstatic.com",
+      "img-src 'self' data: blob: https://images.unsplash.com https://api.dicebear.com https://*.googleusercontent.com https://*.googleapis.com https://*.firebaseapp.com https://www.gstatic.com https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://lh4.googleusercontent.com",
       // XHR / fetch: self + Google APIs + Firebase
-      "connect-src 'self' https://maps.googleapis.com https://va.vercel-scripts.com https://*.googleapis.com https://*.firebaseio.com https://*.firebase.google.com https://*.firebasedataconnect.googleapis.com",
+      "connect-src 'self' https://maps.googleapis.com https://va.vercel-scripts.com https://*.googleapis.com https://*.firebaseio.com https://*.firebase.google.com https://*.firebasedataconnect.googleapis.com https://firebasestorage.googleapis.com",
       // Frames: Google OAuth + Firebase Auth
       "frame-src https://accounts.google.com https://*.firebaseapp.com",
       // Disallow object/embed tags entirely
