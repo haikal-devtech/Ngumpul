@@ -56,8 +56,28 @@ export default function EventDynamicPage({ params }: { params: Promise<{ slug: s
         // Now listen to the participants subcollection for real-time updates
         if (initialData.id) {
           console.log("DEBUG: [Real-time] Starting listener for event ID:", initialData.id);
-          const participantsCol = collection(db, "events", initialData.id, "participants");
           
+          // 1. Listen to the main Event document
+          const eventDocRef = doc(db, "events", initialData.id);
+          const unsubEvent = onSnapshot(eventDocRef, (docSnap: any) => {
+            if (docSnap.exists()) {
+              console.log("DEBUG: [Real-time] Event document updated");
+              const updatedData = docSnap.data();
+              setFetchedEvent(prev => {
+                if (!prev) return null;
+                return { 
+                  ...prev, 
+                  confirmedSlot: updatedData.confirmed_slot || updatedData.confirmedSlot,
+                  status: updatedData.status,
+                  title: updatedData.title,
+                  description: updatedData.desc || updatedData.description
+                };
+              });
+            }
+          });
+
+          // 2. Listen to the participants subcollection
+          const participantsCol = collection(db, "events", initialData.id, "participants");
           unsubParticipants = onSnapshot(participantsCol, (snapshot: any) => {
             console.log(`DEBUG: [Real-time] Received update. ${snapshot.size} participants found.`);
             const updatedParticipants = snapshot.docs.map((doc: any) => {
@@ -78,6 +98,13 @@ export default function EventDynamicPage({ params }: { params: Promise<{ slug: s
           }, (error: any) => {
             console.error("DEBUG: [Real-time] LISTENER ERROR:", error);
           });
+
+          // Combine unsubscribers
+          const originalUnsubParticipants = unsubParticipants;
+          unsubParticipants = () => {
+            unsubEvent();
+            originalUnsubParticipants();
+          };
         }
       } catch (err) {
         console.error("Listener setup error:", err);
