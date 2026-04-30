@@ -70,11 +70,11 @@ export async function PUT(
 
     if (isHost) {
       await updateEvent(event.id, {
-        confirmed_slot: body.confirmedSlot !== undefined ? (body.confirmedSlot || null) : event.confirmed_slot,
-        status: body.status !== undefined ? body.status : event.status,
-        team_id: body.teamId !== undefined ? (body.teamId || null) : event.team_id,
-        title: body.title,
-        desc: body.description,
+        confirmed_slot: body.confirmedSlot !== undefined ? (body.confirmedSlot || null) : (event.confirmed_slot || null),
+        status: body.status !== undefined ? body.status : (event.status || 'active'),
+        team_id: body.teamId !== undefined ? (body.teamId || null) : (event.team_id || null),
+        title: body.title !== undefined ? body.title : event.title,
+        desc: body.description !== undefined ? body.description : (event.desc || null),
       });
     }
 

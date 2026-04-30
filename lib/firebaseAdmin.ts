@@ -35,10 +35,12 @@ const initializeFirebaseAdmin = () => {
     }
     console.log("DIAGNOSTIC: JSON Parse Success. Project ID:", serviceAccount.project_id);
 
-    return admin.initializeApp({
+    const app = admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
       databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`,
     });
+    admin.firestore(app).settings({ ignoreUndefinedProperties: true });
+    return app;
   } catch (error: any) {
     console.error("DIAGNOSTIC: JSON Parse or Init FAILED:", error.message);
     return null;
