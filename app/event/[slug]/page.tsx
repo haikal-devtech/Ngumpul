@@ -55,8 +55,11 @@ export default function EventDynamicPage({ params }: { params: Promise<{ slug: s
 
         // Now listen to the participants subcollection for real-time updates
         if (initialData.id) {
+          console.log("DEBUG: [Real-time] Starting listener for event ID:", initialData.id);
           const participantsCol = collection(db, "events", initialData.id, "participants");
+          
           unsubParticipants = onSnapshot(participantsCol, (snapshot: any) => {
+            console.log(`DEBUG: [Real-time] Received update. ${snapshot.size} participants found.`);
             const updatedParticipants = snapshot.docs.map((doc: any) => {
               const p = doc.data();
               return {
@@ -67,7 +70,13 @@ export default function EventDynamicPage({ params }: { params: Promise<{ slug: s
               };
             });
 
-            setFetchedEvent(prev => prev ? { ...prev, participants: updatedParticipants } : null);
+            setFetchedEvent(prev => {
+              if (!prev) return null;
+              console.log("DEBUG: [Real-time] Updating local state with new participants.");
+              return { ...prev, participants: updatedParticipants };
+            });
+          }, (error: any) => {
+            console.error("DEBUG: [Real-time] LISTENER ERROR:", error);
           });
         }
       } catch (err) {
