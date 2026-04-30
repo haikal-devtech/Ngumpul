@@ -29,7 +29,8 @@ export async function GET(
 
     const mappedEvent = {
       ...event,
-      id: event.slug,
+      id: event.id, // Use the actual Firestore Doc ID, not the slug
+      slug: event.slug,
       role: isHost ? 'host' : 'guest',
       dates: Array.isArray(dateRange) ? dateRange : [],
       startTime: Array.isArray(timeRange) ? timeRange[0] || "09:00" : "09:00",
