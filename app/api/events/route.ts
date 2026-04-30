@@ -18,35 +18,47 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-
     const body = await req.json();
+    console.log("DEBUG: [POST /api/events] Received body:", JSON.stringify(body));
+    
     const { title, desc, location_name, location_address, lat, lng, place_id, date_range, time_range, timezone, deadline, slug, team_id } = body;
 
     const eventDateRange = Array.isArray(date_range) && date_range.length > 0 ? date_range : [];
     const eventTimeRange = Array.isArray(time_range) && time_range.length > 0 ? time_range : ["09:00", "21:00"];
 
+    // Handle deadline date safely
+    let finalDeadline = null;
+    if (deadline) {
+      const d = new Date(deadline);
+      if (!isNaN(d.getTime())) {
+        finalDeadline = d;
+      }
+    }
+
+    console.log("DEBUG: [POST /api/events] Creating event in Firestore...");
     const event = await createEvent({
       slug: slug || Math.random().toString(36).substr(2, 9),
-      title,
-      desc,
-      location_name,
-      location_address,
-      lat,
-      lng,
-      place_id,
+      title: title || "Untitled Event",
+      desc: desc || "",
+      location_name: location_name || "",
+      location_address: location_address || "",
+      lat: lat || 0,
+      lng: lng || 0,
+      place_id: place_id || "",
       date_range: eventDateRange,
       time_range: eventTimeRange,
       timezone: timezone || "Asia/Jakarta",
-      deadline: deadline ? new Date(deadline) : null,
+      deadline: finalDeadline,
       host_id: session.user.id,
       team_id: team_id || null,
       status: "active",
     });
 
+    console.log("DEBUG: [POST /api/events] Event created SUCCESS:", event.id);
     return NextResponse.json(event, { status: 201 });
   } catch (error: any) {
-    console.error("Error creating event:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error("DEBUG: [POST /api/events] FAILED:", error.message, error.stack);
+    return NextResponse.json({ error: "Internal Server Error", details: error.message }, { status: 500 });
   }
 }
 
