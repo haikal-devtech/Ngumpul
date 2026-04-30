@@ -28,55 +28,62 @@ export default function EventDynamicPage({ params }: { params: Promise<{ slug: s
   const event = fetchedEvent || safeLocalEvent;
 
   useEffect(() => {
-    // 1. If we have nothing locally, show loading immediately
-    if (!localEvent && !fetchedEvent) setLoading(true);
-    else if (localEvent && !fetchedEvent) setLoading(false); // fast UX with local cache
+    if (!slug) return;
 
-    // 2. Always fetch fully fresh data from the server
-    fetch(`/api/events/${slug}`)
-      .then(res => {
-        if (res.ok) return res.json();
-        throw new Error('Not found');
-      })
-      .then(data => {
-        // Ensure dates is always an array to prevent crashes
+    // 1. Initial Loading State
+    if (!localEvent && !fetchedEvent) setLoading(true);
+    else if (localEvent && !fetchedEvent) setLoading(false);
+
+    // 2. Real-time Listener for the Event document
+    const { db } = require("@/lib/firebase");
+    const { doc, onSnapshot, collection } = require("firebase/firestore");
+    
+    // We listen to the event document AND its participants subcollection
+    const eventRef = doc(db, "events", slug); // Assuming slug is used as ID or we need to find by slug
+    
+    // Since slug might not be the doc ID, we first fetch by slug to get the ID
+    let unsubParticipants: (() => void) | null = null;
+
+    const fetchAndListen = async () => {
+      try {
+        const res = await fetch(`/api/events/${slug}`);
+        if (!res.ok) throw new Error("Not found");
+        const initialData = await res.json();
+        
         const safeData = {
-          ...data,
-          dates: Array.isArray(data.dates) ? data.dates : [],
-          participants: Array.isArray(data.participants) ? data.participants : []
+          ...initialData,
+          dates: Array.isArray(initialData.dates) ? initialData.dates : [],
+          participants: Array.isArray(initialData.participants) ? initialData.participants : []
         };
         setFetchedEvent(safeData);
         setLoading(false);
 
-        // Update local context so the rest of the app stays in sync
-        const isHost = data.role === 'host' || data.host_id === currentUser?.id;
-        
-        if (isHost) {
-          // Ensure it's in myEvents and removed from joinedEvents (if it was there by mistake)
-          setMyEvents(prev => {
-            const exists = prev.some(e => e.id === data.id || (data.slug && e.id === data.slug));
-            if (exists) {
-              return prev.map(e => (e.id === data.id || (data.slug && e.id === data.slug)) ? { ...e, ...data } : e);
-            }
-            return [data, ...prev];
+        // Now listen to the participants subcollection for real-time updates
+        const participantsCol = collection(db, "events", initialData.id, "participants");
+        unsubParticipants = onSnapshot(participantsCol, (snapshot: any) => {
+          const updatedParticipants = snapshot.docs.map((doc: any) => {
+            const p = doc.data();
+            return {
+              id: p.user_id || doc.id,
+              name: p.guest_name || 'Anonymous',
+              availability: p.availability || [],
+              photoUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.guest_name || 'Anonymous'}`
+            };
           });
-          setJoinedEvents(prev => prev.filter(e => e.id !== data.id && (!data.slug || e.id !== data.slug)));
-        } else {
-          // Ensure it's in joinedEvents and removed from myEvents
-          setJoinedEvents(prev => {
-            const exists = prev.some(e => e.id === data.id || (data.slug && e.id === data.slug));
-            if (exists) {
-              return prev.map(e => (e.id === data.id || (data.slug && e.id === data.slug)) ? { ...e, ...data } : e);
-            }
-            return [data, ...prev];
-          });
-          setMyEvents(prev => prev.filter(e => e.id !== data.id && (!data.slug || e.id !== data.slug)));
-        }
-      })
-      .catch((err) => {
-        console.error("Fetch error:", err);
+
+          setFetchedEvent(prev => prev ? { ...prev, participants: updatedParticipants } : null);
+        });
+      } catch (err) {
+        console.error("Listener setup error:", err);
         setLoading(false);
-      });
+      }
+    };
+
+    fetchAndListen();
+
+    return () => {
+      if (unsubParticipants) unsubParticipants();
+    };
   }, [slug, currentUser?.id]);
 
   if (loading && !event) {
