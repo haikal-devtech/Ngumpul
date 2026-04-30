@@ -122,9 +122,12 @@ export default function EventDynamicPage({ params }: { params: Promise<{ slug: s
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedEvent)
     })
-    .then(res => {
+    .then(async res => {
       if (res.ok) console.log("DEBUG: [Update] DB Sync Successful");
-      else console.error("DEBUG: [Update] DB Sync Failed:", res.status);
+      else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("DEBUG: [Update] DB Sync Failed:", res.status, errorData.message || errorData.error || "Unknown Error");
+      }
     })
     .catch(err => console.error("DEBUG: [Update] Failed to sync event", err));
   };
