@@ -58,9 +58,30 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("DEBUG: [GET /api/events] Fetching events for user:", session.user.id);
-    const events = await getEventsByHost(session.user.id);
-    console.log(`DEBUG: [GET /api/events] Found ${events.length} events.`);
+    const { searchParams } = new URL(req.url);
+    const teamIdsParam = searchParams.get("teamIds");
+    
+    let events: any[] = [];
+    
+    // Fetch user's hosted events
+    const hostEvents = await getEventsByHost(session.user.id);
+    events = [...hostEvents];
+
+    // If teamIds are provided, fetch those too
+    if (teamIdsParam) {
+      const teamIds = teamIdsParam.split(",").filter(Boolean);
+      for (const teamId of teamIds) {
+        const teamEvents = await getEventsByTeam(teamId);
+        // Avoid duplicates if user is host of a team event
+        for (const te of teamEvents) {
+          if (!events.some(e => e.id === te.id)) {
+            events.push(te);
+          }
+        }
+      }
+    }
+    
+    console.log(`DEBUG: [GET /api/events] Found total ${events.length} events.`);
 
     const mappedEvents = events.map((event: any) => {
       try {
