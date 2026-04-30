@@ -105,6 +105,7 @@ export default function EventDynamicPage({ params }: { params: Promise<{ slug: s
   }
 
   const handleUpdate = (updatedEvent: any) => {
+    console.log("DEBUG: [Update] Syncing to database. Participant ID:", currentUser?.id || guestId);
     // Optimistic UI Update (LocalStorage)
     if (myEvents.some(e => e.id === updatedEvent.id)) {
       setMyEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
@@ -116,12 +117,19 @@ export default function EventDynamicPage({ params }: { params: Promise<{ slug: s
     }
 
     // Synchronize full event state with the database
-    fetch(`/api/events/${updatedEvent.id}`, {
+    fetch(`/api/events/${slug}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedEvent)
-    }).catch(err => console.error("Failed to sync event", err));
+    })
+    .then(res => {
+      if (res.ok) console.log("DEBUG: [Update] DB Sync Successful");
+      else console.error("DEBUG: [Update] DB Sync Failed:", res.status);
+    })
+    .catch(err => console.error("DEBUG: [Update] Failed to sync event", err));
   };
+
+  console.log("DEBUG: [Identity] My ID is:", currentUser?.id || guestId);
 
   return (
     <EventPage 
