@@ -10,7 +10,7 @@ import { doc, onSnapshot, collection } from "firebase/firestore";
 export default function EventDynamicPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = use(params);
   const { slug } = resolvedParams;
-  const { myEvents, joinedEvents, setMyEvents, setJoinedEvents, currentUser, language } = useAppContext();
+  const { myEvents, joinedEvents, setMyEvents, setJoinedEvents, currentUser, language, guestId } = useAppContext();
 
   const [fetchedEvent, setFetchedEvent] = useState<NgumpulEvent | null>(null);
   const [loading, setLoading] = useState(true);
