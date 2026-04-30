@@ -15,13 +15,22 @@ export const getEventsByTeam = async (teamId: string) => {
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
 
-export const getEventBySlug = async (slug: string) => {
+export const getEventBySlug = async (slugOrId: string) => {
   const db = getAdminDb();
-  const snapshot = await db.collection("events").where("slug", "==", slug).get();
-  if (snapshot.empty) return null;
-  const eventDoc = snapshot.docs[0];
+  
+  // First, try to get by Document ID directly (faster)
+  let eventDoc = await db.collection("events").doc(slugOrId).get();
+  
+  // If not found by ID, try searching by slug field
+  if (!eventDoc.exists) {
+    const snapshot = await db.collection("events").where("slug", "==", slugOrId).get();
+    if (snapshot.empty) return null;
+    eventDoc = snapshot.docs[0];
+  }
+
   const eventData = { id: eventDoc.id, ...eventDoc.data() } as any;
 
+  // Fetch participants subcollection
   const participantsSnapshot = await eventDoc.ref.collection("participants").get();
   eventData.participants = participantsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
