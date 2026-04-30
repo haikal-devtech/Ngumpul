@@ -1144,7 +1144,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
     };
 
     const updatedParticipants = [...(event.participants || [])];
-    const existingIdx = updatedParticipants.findIndex(p => p.id === newParticipant.id || (p.name === name && !p.id.includes('-')));
+    const existingIdx = updatedParticipants.findIndex(p => p.id === newParticipant.id);
 
     if (existingIdx >= 0) {
       updatedParticipants[existingIdx] = newParticipant;
