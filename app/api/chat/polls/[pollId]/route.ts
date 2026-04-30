@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/serverAuth";
-import { getChatPollById, updateChatPollStatus } from "@/lib/firestore-utils";
+import { getChatPollById, updateChatPollStatus } from "@/lib/firestore-admin-utils";
 
 export async function PATCH(
   req: NextRequest,

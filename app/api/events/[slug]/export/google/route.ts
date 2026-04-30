@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getEventBySlug, getUserProfile } from "@/lib/firestore-utils";
+import { getEventBySlug, getUserProfile } from "@/lib/firestore-admin-utils";
 import { getServerSession } from "@/lib/serverAuth";
 import { addToGoogleCalendar } from "@/lib/calendar";
 import { NgumpulEvent } from "@/lib/types";

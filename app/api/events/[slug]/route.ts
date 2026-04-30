@@ -5,7 +5,7 @@ import {
   updateEvent, 
   upsertParticipant, 
   getParticipantByGuestName 
-} from "@/lib/firestore-utils";
+} from "@/lib/firestore-admin-utils";
 
 export async function GET(
   req: NextRequest,

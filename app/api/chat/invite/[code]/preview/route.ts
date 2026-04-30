@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getChatRoomByInviteCode } from "@/lib/firestore-utils";
+import { getChatRoomByInviteCode } from "@/lib/firestore-admin-utils";
 
 export const dynamic = "force-dynamic";
 

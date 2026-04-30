@@ -4,7 +4,7 @@ import {
   getChatMessageById, 
   updateChatMessage, 
   getChatMember 
-} from "@/lib/firestore-utils";
+} from "@/lib/firestore-admin-utils";
 
 export async function PATCH(
   req: NextRequest,

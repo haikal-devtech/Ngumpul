@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getEventBySlug, getParticipantLocations } from "@/lib/firestore-utils";
+import { getEventBySlug, getParticipantLocations } from "@/lib/firestore-admin-utils";
 import { getServerSession } from "@/lib/serverAuth";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import { getDistanceMatrix } from "@/lib/maps";

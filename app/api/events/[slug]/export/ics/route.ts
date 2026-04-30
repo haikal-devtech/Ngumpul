@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getEventBySlug } from "@/lib/firestore-utils";
+import { getEventBySlug } from "@/lib/firestore-admin-utils";
 import { generateICS } from "@/lib/calendar";
 import { NgumpulEvent } from "@/lib/types";
 

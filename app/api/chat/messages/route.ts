@@ -6,7 +6,7 @@ import {
   getChatMessages, 
   createChatMessage, 
   addChatMember 
-} from "@/lib/firestore-utils";
+} from "@/lib/firestore-admin-utils";
 
 export const dynamic = "force-dynamic";
 

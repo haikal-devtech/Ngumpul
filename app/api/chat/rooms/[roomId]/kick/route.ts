@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getChatMember, removeChatMember } from "@/lib/firestore-utils";
+import { getChatMember, removeChatMember } from "@/lib/firestore-admin-utils";
 import { getServerSession } from "@/lib/serverAuth";
 
 export const dynamic = "force-dynamic";

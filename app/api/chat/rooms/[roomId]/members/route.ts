@@ -5,7 +5,7 @@ import {
   getChatMember, 
   updateChatMemberRole, 
   removeChatMember 
-} from "@/lib/firestore-utils";
+} from "@/lib/firestore-admin-utils";
 
 export const dynamic = "force-dynamic";
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/serverAuth";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
-import { getChatRooms, createChatRoom } from "@/lib/firestore-utils";
+import { getChatRooms, createChatRoom } from "@/lib/firestore-admin-utils";
 
 export const dynamic = "force-dynamic";
 

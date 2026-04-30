@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/serverAuth";
-import { getBlockedUsers } from "@/lib/firestore-utils";
+import { getBlockedUsers } from "@/lib/firestore-admin-utils";
 
 export const dynamic = "force-dynamic";
 

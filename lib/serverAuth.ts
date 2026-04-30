@@ -4,6 +4,8 @@ import { getAdminAuth } from "./firebaseAdmin";
 export async function getServerSession() {
   try {
     const cookieStore = await cookies();
+    const allCookies = cookieStore.getAll();
+    console.log("DEBUG: [getServerSession] All cookies received:", allCookies.map(c => `${c.name}=<len:${c.value.length}>`).join(', ') || 'NONE');
     const sessionCookie = cookieStore.get("__session")?.value;
 
     if (!sessionCookie) {
