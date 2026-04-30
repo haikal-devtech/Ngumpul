@@ -35,11 +35,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // force refresh token if possible to ensure we have the latest
         const token = await user.getIdToken();
         console.log("Firebase Auth: Token received, setting __session cookie");
-        document.cookie = `__session=${token}; path=/; samesite=lax; secure`;
+        const isSecure = window.location.protocol === "https:";
+        document.cookie = `__session=${token}; path=/; samesite=lax${isSecure ? '; secure' : ''}`;
         console.log("Firebase Auth: Cookie set. Current cookies:", document.cookie.substring(0, 50) + "...");
       } else {
         console.log("Firebase Auth: No user, clearing __session cookie");
-        document.cookie = "__session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=lax; secure";
+        const isSecure = window.location.protocol === "https:";
+        document.cookie = `__session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=lax${isSecure ? '; secure' : ''}`;
       }
 
       setLoading(false);
