@@ -193,10 +193,11 @@ export const createChatMessage = async (messageData: any) => {
 
 export const getChatMessages = async (roomId: string, limitCount: number = 50, cursor?: string) => {
   const db = getAdminDb();
+  // Note: Avoid compound query (isDeleted + orderBy) to skip composite index requirement on server.
+  // Filter isDeleted in memory instead.
   let query = db.collection("chatRooms").doc(roomId).collection("messages")
-    .where("isDeleted", "==", false)
     .orderBy("createdAt", "desc")
-    .limit(limitCount + 1);
+    .limit((limitCount + 1) * 2); // fetch more to account for deleted ones
 
   if (cursor) {
     const cursorDoc = await db.collection("chatRooms").doc(roomId).collection("messages").doc(cursor).get();
@@ -204,7 +205,11 @@ export const getChatMessages = async (roomId: string, limitCount: number = 50, c
   }
 
   const snapshot = await query.get();
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const messages = snapshot.docs
+    .map(doc => ({ id: doc.id, ...doc.data() as any }))
+    .filter(msg => !msg.isDeleted)
+    .slice(0, limitCount + 1);
+  return messages;
 };
 
 export const getChatMessageById = async (messageId: string) => {
