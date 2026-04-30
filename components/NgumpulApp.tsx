@@ -992,20 +992,7 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
     revertCancel: language === 'id' ? 'Aktifkan Kembali' : 'Re-activate Event',
   };
 
-  // Sync local availability with server data when it changes (for real-time sync)
-  React.useEffect(() => {
-    const effectiveId = currentUser?.id || guestId;
-    if (!effectiveId || !event.participants) return;
 
-    const me = event.participants.find(p => p.id === effectiveId);
-    if (me && !isDragging) { // Don't sync while dragging to avoid jitter
-      if (JSON.stringify(me.availability) !== JSON.stringify(myAvailability)) {
-        setMyAvailability(me.availability);
-      }
-      if (me.name && name !== me.name) setName(me.name);
-      setIsJoined(true);
-    }
-  }, [event.participants, currentUser?.id, guestId, isDragging]);
 
   const handleCopyLink = () => {
     const url = `${window.location.origin}/event/${event.id}`;
@@ -1094,6 +1081,21 @@ export const EventPage = ({ event, currentUser, language, onUpdateEvent }: { eve
   // Drag selection state
   const [isDragging, setIsDragging] = useState(false);
   const [dragAction, setDragAction] = useState<'add' | 'remove' | null>(null);
+
+  // Sync local availability with server data when it changes (for real-time sync)
+  React.useEffect(() => {
+    const effectiveId = currentUser?.id || guestId;
+    if (!effectiveId || !event.participants) return;
+
+    const me = event.participants.find(p => p.id === effectiveId);
+    if (me && !isDragging) { // Don't sync while dragging to avoid jitter
+      if (JSON.stringify(me.availability) !== JSON.stringify(myAvailability)) {
+        setMyAvailability(me.availability);
+      }
+      if (me.name && name !== me.name) setName(me.name);
+      setIsJoined(true);
+    }
+  }, [event.participants, currentUser?.id, guestId, isDragging]);
 
   const onMouseDown = (date: string, time: string) => {
     if (viewMode !== 'input') return;
