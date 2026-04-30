@@ -54,32 +54,39 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession();
     if (!session || !session.user || !session.user.id) {
+      console.log("DEBUG: [GET /api/events] Unauthorized access attempt.");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-
+    console.log("DEBUG: [GET /api/events] Fetching events for user:", session.user.id);
     const events = await getEventsByHost(session.user.id);
+    console.log(`DEBUG: [GET /api/events] Found ${events.length} events.`);
 
     const mappedEvents = events.map((event: any) => {
-      const dateRange = event.date_range ?? [];
-      const timeRange = event.time_range ?? [];
-      return {
-        ...event,
-        id: event.slug,
-        slug: event.slug,
-        teamId: event.team_id || undefined,
-        description: event.desc || '',
-        location: event.location_name || '',
-        dates: Array.isArray(dateRange) ? dateRange : [],
-        startTime: Array.isArray(timeRange) ? timeRange[0] || "09:00" : "09:00",
-        endTime: Array.isArray(timeRange) ? timeRange[1] || "21:00" : "21:00",
-      };
-    });
+      try {
+        const dateRange = event.date_range ?? [];
+        const timeRange = event.time_range ?? [];
+        return {
+          ...event,
+          id: event.slug || event.id,
+          slug: event.slug || event.id,
+          teamId: event.team_id || undefined,
+          description: event.desc || '',
+          location: event.location_name || '',
+          dates: Array.isArray(dateRange) ? dateRange : [],
+          startTime: Array.isArray(timeRange) ? timeRange[0] || "09:00" : "09:00",
+          endTime: Array.isArray(timeRange) ? timeRange[1] || "21:00" : "21:00",
+        };
+      } catch (mapError: any) {
+        console.error("DEBUG: [GET /api/events] Error mapping event:", event.id, mapError.message);
+        return null;
+      }
+    }).filter(Boolean);
 
     return NextResponse.json(mappedEvents, { status: 200 });
   } catch (error: any) {
-    console.error("Error fetching events:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error("DEBUG: [GET /api/events] CRITICAL ERROR:", error.message, error.stack);
+    return NextResponse.json({ error: "Internal Server Error", details: error.message }, { status: 500 });
   }
 }
 
