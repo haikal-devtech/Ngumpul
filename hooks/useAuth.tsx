@@ -2,7 +2,7 @@
 
 import { useEffect, useState, createContext, useContext } from "react";
 import { 
-  onAuthStateChanged, 
+  onIdTokenChanged, 
   User, 
   signInWithPopup, 
   GoogleAuthProvider, 
@@ -29,9 +29,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onIdTokenChanged(auth, async (user) => {
       setUser(user);
       if (user) {
+        // force refresh token if possible to ensure we have the latest
         const token = await user.getIdToken();
         console.log("Firebase Auth: Token received, setting __session cookie");
         document.cookie = `__session=${token}; path=/; samesite=lax; secure`;
@@ -40,7 +41,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log("Firebase Auth: No user, clearing __session cookie");
         document.cookie = "__session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=lax; secure";
       }
-
 
       setLoading(false);
     });

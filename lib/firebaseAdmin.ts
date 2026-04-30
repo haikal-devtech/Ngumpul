@@ -16,14 +16,23 @@ const initializeFirebaseAdmin = () => {
     let sanitizedKey = key.trim();
     
     // Clean wrapping quotes
+    if (sanitizedKey.startsWith("'") && sanitizedKey.endsWith("'")) {
+      sanitizedKey = sanitizedKey.slice(1, -1);
+    }
     if (sanitizedKey.startsWith('"') && sanitizedKey.endsWith('"')) {
       sanitizedKey = sanitizedKey.slice(1, -1);
     }
 
-    // Fix escaped newlines
-    sanitizedKey = sanitizedKey.replace(/\\n/g, '\n');
+    // JSON.parse requires actual newlines to be escaped as \\n.
+    // If the string contains literal newlines, we escape them.
+    sanitizedKey = sanitizedKey.replace(/\n/g, '\\n');
 
     const serviceAccount = JSON.parse(sanitizedKey);
+    
+    // Convert literal '\n' text into actual newline characters for the private key
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+    }
     console.log("DIAGNOSTIC: JSON Parse Success. Project ID:", serviceAccount.project_id);
 
     return admin.initializeApp({
