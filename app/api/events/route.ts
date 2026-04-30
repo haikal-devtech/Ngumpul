@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/serverAuth";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
-import { createEvent, getEventsByHost } from "@/lib/firestore-admin-utils";
+import { createEvent, getEventsByHost, getEventsByTeam } from "@/lib/firestore-admin-utils";
 
 export const dynamic = "force-dynamic";
 
