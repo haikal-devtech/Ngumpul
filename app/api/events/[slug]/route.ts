@@ -95,7 +95,11 @@ export async function PUT(
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error: any) {
     console.error("Error syncing event:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ 
+      error: "Internal Server Error", 
+      message: error.message,
+      stack: error.stack 
+    }, { status: 500 });
   }
 }
 
