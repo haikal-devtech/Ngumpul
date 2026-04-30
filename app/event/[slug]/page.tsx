@@ -4,6 +4,8 @@ import { use, useEffect, useState } from "react";
 import { EventPage } from "@/components/NgumpulApp";
 import { useAppContext } from "@/components/AppContext";
 import { NgumpulEvent } from "@/lib/types";
+import { db } from "@/lib/firebase";
+import { doc, onSnapshot, collection } from "firebase/firestore";
 
 export default function EventDynamicPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = use(params);
@@ -35,13 +37,6 @@ export default function EventDynamicPage({ params }: { params: Promise<{ slug: s
     else if (localEvent && !fetchedEvent) setLoading(false);
 
     // 2. Real-time Listener for the Event document
-    const { db } = require("@/lib/firebase");
-    const { doc, onSnapshot, collection } = require("firebase/firestore");
-    
-    // We listen to the event document AND its participants subcollection
-    const eventRef = doc(db, "events", slug); // Assuming slug is used as ID or we need to find by slug
-    
-    // Since slug might not be the doc ID, we first fetch by slug to get the ID
     let unsubParticipants: (() => void) | null = null;
 
     const fetchAndListen = async () => {
@@ -59,20 +54,22 @@ export default function EventDynamicPage({ params }: { params: Promise<{ slug: s
         setLoading(false);
 
         // Now listen to the participants subcollection for real-time updates
-        const participantsCol = collection(db, "events", initialData.id, "participants");
-        unsubParticipants = onSnapshot(participantsCol, (snapshot: any) => {
-          const updatedParticipants = snapshot.docs.map((doc: any) => {
-            const p = doc.data();
-            return {
-              id: p.user_id || doc.id,
-              name: p.guest_name || 'Anonymous',
-              availability: p.availability || [],
-              photoUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.guest_name || 'Anonymous'}`
-            };
-          });
+        if (initialData.id) {
+          const participantsCol = collection(db, "events", initialData.id, "participants");
+          unsubParticipants = onSnapshot(participantsCol, (snapshot: any) => {
+            const updatedParticipants = snapshot.docs.map((doc: any) => {
+              const p = doc.data();
+              return {
+                id: p.user_id || doc.id,
+                name: p.guest_name || 'Anonymous',
+                availability: p.availability || [],
+                photoUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.guest_name || 'Anonymous'}`
+              };
+            });
 
-          setFetchedEvent(prev => prev ? { ...prev, participants: updatedParticipants } : null);
-        });
+            setFetchedEvent(prev => prev ? { ...prev, participants: updatedParticipants } : null);
+          });
+        }
       } catch (err) {
         console.error("Listener setup error:", err);
         setLoading(false);
