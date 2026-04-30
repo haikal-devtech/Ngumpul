@@ -81,23 +81,14 @@ export async function PUT(
     if (body.participants && Array.isArray(body.participants)) {
       for (const p of body.participants) {
         const participantId = p.id;
-        const isUser = participantId && !participantId.startsWith("guest-") && !participantId.startsWith("mock") && participantId.length > 15;
+        if (!participantId) continue;
 
-        if (isUser) {
-          await upsertParticipant(event.id, participantId, {
-            user_id: participantId,
-            guest_name: p.name || 'Anonymous',
-            availability: p.availability || []
-          });
-        } else {
-          let existingGuest = await getParticipantByGuestName(event.id, p.name || 'Anonymous');
-          const id = existingGuest ? existingGuest.id : `guest-${Math.random().toString(36).substr(2, 9)}`;
-          await upsertParticipant(event.id, id, {
-            user_id: null,
-            guest_name: p.name || 'Anonymous',
-            availability: p.availability || []
-          });
-        }
+        await upsertParticipant(event.id, participantId, {
+          user_id: participantId.startsWith('guest-') ? null : participantId,
+          guest_name: p.name || 'Anonymous',
+          availability: p.availability || [],
+          updatedAt: new Date()
+        });
       }
     }
 
